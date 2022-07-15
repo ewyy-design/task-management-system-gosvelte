@@ -1,9 +1,13 @@
 <script>
-
+	import Login from "./components/Login.svelte"
 </script>
 
 <style>
-
+	main {
+		text-align: center;
+	}
 </style>
 
-<h1>Time for a project!</h1>
+<main>
+	<Login />
+</main>
