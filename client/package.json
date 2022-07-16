@@ -5,26 +5,27 @@
   "scripts": {
     "watch:tailwind": "postcss public/tailwind.css -o public/index.css -w",
     "build:tailwind": "cross-env NODE_ENV=production postcss public/tailwind.css -o public/index.css",
-    "build": "npm run build:tailwind && rollup-c",
-    "start": "sirv public --no-clear",
+    "build": "npm run build:tailwind && rollup -c",
+    "start": "sirv public -s --no-clear",
     "serve": "serve public -p 80",
-    "dev": "concurrently \"rollup -c -w\"  \"npm run watch:tailwind\""
+    "dev": "concurrently \"rollup -c -w\" \"npm run watch:tailwind\""
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.0.0",
     "@rollup/plugin-node-resolve": "^11.0.0",
-    "autoprefixer": "^10.4.7",
-    "postcss": "^8.4.14",
     "rollup": "^2.3.4",
     "rollup-plugin-css-only": "^3.1.0",
     "rollup-plugin-livereload": "^2.0.0",
     "rollup-plugin-svelte": "^7.0.0",
     "rollup-plugin-terser": "^7.0.0",
-    "svelte": "^3.0.0",
-    "tailwindcss": "^3.1.6"
+    "svelte": "^3.0.0"
   },
   "dependencies": {
-    "concurrently": "^7.2.2",
-    "sirv-cli": "^2.0.0"
+    "@emotion/react": "^11.9.3",
+    "@emotion/styled": "^11.9.3",
+    "@mui/material": "^5.9.0",
+    "daisyui": "^2.19.0",
+    "sirv-cli": "^2.0.0",
+    "svelte-navigator": "^3.1.6"
   }
 }
