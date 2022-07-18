@@ -3422,9 +3422,9 @@ var app = (function () {
     			div0 = element("div");
     			div0.textContent = "All Applications";
     			attr_dev(div0, "class", "text-2xl font-bold mb-5 text-center ");
-    			add_location(div0, file$a, 5, 2, 93);
+    			add_location(div0, file$a, 5, 2, 98);
     			attr_dev(div1, "class", "mb-5 mt-20");
-    			add_location(div1, file$a, 4, 0, 66);
+    			add_location(div1, file$a, 4, 0, 70);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
