@@ -1,5 +1,19 @@
 <script>
-  import {Link} from "svelte-navigator"
+  import { Link } from "svelte-navigator";
+  import Axios from "axios";
+  import { userData } from "./store";
+
+  let email = "";
+  console.log("userData", $userData);
+
+  async function updateEmail() {
+    var emailResponse = await Axios.put("/user/update", {
+      name: $userData[0].name,
+      email: email,
+    });
+
+    console.log("email response: ", emailResponse);
+  }
 </script>
 
 <div class="flex flex-col w-full">
@@ -16,14 +30,21 @@
       </ul>
     </div>
   </div>
-  <div class="grid flex-grow card bg-base-300 rounded-box place-items-center m-10 p-10 text-center">
+  <div
+    class="grid flex-grow card bg-base-300 rounded-box place-items-center m-10 p-10 text-center"
+  >
     <div class="w-full max-w-lg ml-20 place-self-center">
       <div class="mb-4">
         <!-- svelte-ignore a11y-label-has-associated-control -->
         <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
-        <input class="shadow appearance-none border rounded w-96 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="email" name="email" />
+        <input
+          class="shadow appearance-none border rounded w-96 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          type="email"
+          name="email"
+          bind:value={email}
+        />
       </div>
-      <button type="button" class="btn btn-primary">
+      <button type="button" class="btn btn-primary" on:click={updateEmail}>
         Update Email
       </button>
     </div>

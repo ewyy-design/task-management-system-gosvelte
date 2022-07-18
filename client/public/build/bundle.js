@@ -131,6 +131,12 @@ var app = (function () {
     function detach(node) {
         node.parentNode.removeChild(node);
     }
+    function destroy_each(iterations, detaching) {
+        for (let i = 0; i < iterations.length; i += 1) {
+            if (iterations[i])
+                iterations[i].d(detaching);
+        }
+    }
     function element(name) {
         return document.createElement(name);
     }
@@ -179,6 +185,9 @@ var app = (function () {
     }
     function children(element) {
         return Array.from(element.childNodes);
+    }
+    function set_input_value(input, value) {
+        input.value = value == null ? '' : value;
     }
     function set_style(node, key, value, important) {
         if (value === null) {
@@ -572,6 +581,15 @@ var app = (function () {
         dispatch_dev('SvelteDOMSetData', { node: text, data });
         text.data = data;
     }
+    function validate_each_argument(arg) {
+        if (typeof arg !== 'string' && !(arg && typeof arg === 'object' && 'length' in arg)) {
+            let msg = '{#each} only iterates over array-like objects.';
+            if (typeof Symbol === 'function' && arg && Symbol.iterator in arg) {
+                msg += ' You can use a spread to convert this iterable into an array.';
+            }
+            throw new Error(msg);
+        }
+    }
     function validate_slots(name, slot, keys) {
         for (const slot_key of Object.keys(slot)) {
             if (!~keys.indexOf(slot_key)) {
@@ -598,6 +616,2022 @@ var app = (function () {
         $capture_state() { }
         $inject_state() { }
     }
+
+    var bind = function bind(fn, thisArg) {
+      return function wrap() {
+        var args = new Array(arguments.length);
+        for (var i = 0; i < args.length; i++) {
+          args[i] = arguments[i];
+        }
+        return fn.apply(thisArg, args);
+      };
+    };
+
+    // utils is a library of generic helper functions non-specific to axios
+
+    var toString = Object.prototype.toString;
+
+    // eslint-disable-next-line func-names
+    var kindOf = (function(cache) {
+      // eslint-disable-next-line func-names
+      return function(thing) {
+        var str = toString.call(thing);
+        return cache[str] || (cache[str] = str.slice(8, -1).toLowerCase());
+      };
+    })(Object.create(null));
+
+    function kindOfTest(type) {
+      type = type.toLowerCase();
+      return function isKindOf(thing) {
+        return kindOf(thing) === type;
+      };
+    }
+
+    /**
+     * Determine if a value is an Array
+     *
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is an Array, otherwise false
+     */
+    function isArray(val) {
+      return Array.isArray(val);
+    }
+
+    /**
+     * Determine if a value is undefined
+     *
+     * @param {Object} val The value to test
+     * @returns {boolean} True if the value is undefined, otherwise false
+     */
+    function isUndefined$1(val) {
+      return typeof val === 'undefined';
+    }
+
+    /**
+     * Determine if a value is a Buffer
+     *
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a Buffer, otherwise false
+     */
+    function isBuffer(val) {
+      return val !== null && !isUndefined$1(val) && val.constructor !== null && !isUndefined$1(val.constructor)
+        && typeof val.constructor.isBuffer === 'function' && val.constructor.isBuffer(val);
+    }
+
+    /**
+     * Determine if a value is an ArrayBuffer
+     *
+     * @function
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is an ArrayBuffer, otherwise false
+     */
+    var isArrayBuffer = kindOfTest('ArrayBuffer');
+
+
+    /**
+     * Determine if a value is a view on an ArrayBuffer
+     *
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a view on an ArrayBuffer, otherwise false
+     */
+    function isArrayBufferView(val) {
+      var result;
+      if ((typeof ArrayBuffer !== 'undefined') && (ArrayBuffer.isView)) {
+        result = ArrayBuffer.isView(val);
+      } else {
+        result = (val) && (val.buffer) && (isArrayBuffer(val.buffer));
+      }
+      return result;
+    }
+
+    /**
+     * Determine if a value is a String
+     *
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a String, otherwise false
+     */
+    function isString(val) {
+      return typeof val === 'string';
+    }
+
+    /**
+     * Determine if a value is a Number
+     *
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a Number, otherwise false
+     */
+    function isNumber$1(val) {
+      return typeof val === 'number';
+    }
+
+    /**
+     * Determine if a value is an Object
+     *
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is an Object, otherwise false
+     */
+    function isObject(val) {
+      return val !== null && typeof val === 'object';
+    }
+
+    /**
+     * Determine if a value is a plain Object
+     *
+     * @param {Object} val The value to test
+     * @return {boolean} True if value is a plain Object, otherwise false
+     */
+    function isPlainObject(val) {
+      if (kindOf(val) !== 'object') {
+        return false;
+      }
+
+      var prototype = Object.getPrototypeOf(val);
+      return prototype === null || prototype === Object.prototype;
+    }
+
+    /**
+     * Determine if a value is a Date
+     *
+     * @function
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a Date, otherwise false
+     */
+    var isDate = kindOfTest('Date');
+
+    /**
+     * Determine if a value is a File
+     *
+     * @function
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a File, otherwise false
+     */
+    var isFile = kindOfTest('File');
+
+    /**
+     * Determine if a value is a Blob
+     *
+     * @function
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a Blob, otherwise false
+     */
+    var isBlob = kindOfTest('Blob');
+
+    /**
+     * Determine if a value is a FileList
+     *
+     * @function
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a File, otherwise false
+     */
+    var isFileList = kindOfTest('FileList');
+
+    /**
+     * Determine if a value is a Function
+     *
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a Function, otherwise false
+     */
+    function isFunction$1(val) {
+      return toString.call(val) === '[object Function]';
+    }
+
+    /**
+     * Determine if a value is a Stream
+     *
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a Stream, otherwise false
+     */
+    function isStream(val) {
+      return isObject(val) && isFunction$1(val.pipe);
+    }
+
+    /**
+     * Determine if a value is a FormData
+     *
+     * @param {Object} thing The value to test
+     * @returns {boolean} True if value is an FormData, otherwise false
+     */
+    function isFormData(thing) {
+      var pattern = '[object FormData]';
+      return thing && (
+        (typeof FormData === 'function' && thing instanceof FormData) ||
+        toString.call(thing) === pattern ||
+        (isFunction$1(thing.toString) && thing.toString() === pattern)
+      );
+    }
+
+    /**
+     * Determine if a value is a URLSearchParams object
+     * @function
+     * @param {Object} val The value to test
+     * @returns {boolean} True if value is a URLSearchParams object, otherwise false
+     */
+    var isURLSearchParams = kindOfTest('URLSearchParams');
+
+    /**
+     * Trim excess whitespace off the beginning and end of a string
+     *
+     * @param {String} str The String to trim
+     * @returns {String} The String freed of excess whitespace
+     */
+    function trim(str) {
+      return str.trim ? str.trim() : str.replace(/^\s+|\s+$/g, '');
+    }
+
+    /**
+     * Determine if we're running in a standard browser environment
+     *
+     * This allows axios to run in a web worker, and react-native.
+     * Both environments support XMLHttpRequest, but not fully standard globals.
+     *
+     * web workers:
+     *  typeof window -> undefined
+     *  typeof document -> undefined
+     *
+     * react-native:
+     *  navigator.product -> 'ReactNative'
+     * nativescript
+     *  navigator.product -> 'NativeScript' or 'NS'
+     */
+    function isStandardBrowserEnv() {
+      if (typeof navigator !== 'undefined' && (navigator.product === 'ReactNative' ||
+                                               navigator.product === 'NativeScript' ||
+                                               navigator.product === 'NS')) {
+        return false;
+      }
+      return (
+        typeof window !== 'undefined' &&
+        typeof document !== 'undefined'
+      );
+    }
+
+    /**
+     * Iterate over an Array or an Object invoking a function for each item.
+     *
+     * If `obj` is an Array callback will be called passing
+     * the value, index, and complete array for each item.
+     *
+     * If 'obj' is an Object callback will be called passing
+     * the value, key, and complete object for each property.
+     *
+     * @param {Object|Array} obj The object to iterate
+     * @param {Function} fn The callback to invoke for each item
+     */
+    function forEach(obj, fn) {
+      // Don't bother if no value provided
+      if (obj === null || typeof obj === 'undefined') {
+        return;
+      }
+
+      // Force an array if not already something iterable
+      if (typeof obj !== 'object') {
+        /*eslint no-param-reassign:0*/
+        obj = [obj];
+      }
+
+      if (isArray(obj)) {
+        // Iterate over array values
+        for (var i = 0, l = obj.length; i < l; i++) {
+          fn.call(null, obj[i], i, obj);
+        }
+      } else {
+        // Iterate over object keys
+        for (var key in obj) {
+          if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            fn.call(null, obj[key], key, obj);
+          }
+        }
+      }
+    }
+
+    /**
+     * Accepts varargs expecting each argument to be an object, then
+     * immutably merges the properties of each object and returns result.
+     *
+     * When multiple objects contain the same key the later object in
+     * the arguments list will take precedence.
+     *
+     * Example:
+     *
+     * ```js
+     * var result = merge({foo: 123}, {foo: 456});
+     * console.log(result.foo); // outputs 456
+     * ```
+     *
+     * @param {Object} obj1 Object to merge
+     * @returns {Object} Result of all merge properties
+     */
+    function merge(/* obj1, obj2, obj3, ... */) {
+      var result = {};
+      function assignValue(val, key) {
+        if (isPlainObject(result[key]) && isPlainObject(val)) {
+          result[key] = merge(result[key], val);
+        } else if (isPlainObject(val)) {
+          result[key] = merge({}, val);
+        } else if (isArray(val)) {
+          result[key] = val.slice();
+        } else {
+          result[key] = val;
+        }
+      }
+
+      for (var i = 0, l = arguments.length; i < l; i++) {
+        forEach(arguments[i], assignValue);
+      }
+      return result;
+    }
+
+    /**
+     * Extends object a by mutably adding to it the properties of object b.
+     *
+     * @param {Object} a The object to be extended
+     * @param {Object} b The object to copy properties from
+     * @param {Object} thisArg The object to bind function to
+     * @return {Object} The resulting value of object a
+     */
+    function extend(a, b, thisArg) {
+      forEach(b, function assignValue(val, key) {
+        if (thisArg && typeof val === 'function') {
+          a[key] = bind(val, thisArg);
+        } else {
+          a[key] = val;
+        }
+      });
+      return a;
+    }
+
+    /**
+     * Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
+     *
+     * @param {string} content with BOM
+     * @return {string} content value without BOM
+     */
+    function stripBOM(content) {
+      if (content.charCodeAt(0) === 0xFEFF) {
+        content = content.slice(1);
+      }
+      return content;
+    }
+
+    /**
+     * Inherit the prototype methods from one constructor into another
+     * @param {function} constructor
+     * @param {function} superConstructor
+     * @param {object} [props]
+     * @param {object} [descriptors]
+     */
+
+    function inherits(constructor, superConstructor, props, descriptors) {
+      constructor.prototype = Object.create(superConstructor.prototype, descriptors);
+      constructor.prototype.constructor = constructor;
+      props && Object.assign(constructor.prototype, props);
+    }
+
+    /**
+     * Resolve object with deep prototype chain to a flat object
+     * @param {Object} sourceObj source object
+     * @param {Object} [destObj]
+     * @param {Function} [filter]
+     * @returns {Object}
+     */
+
+    function toFlatObject(sourceObj, destObj, filter) {
+      var props;
+      var i;
+      var prop;
+      var merged = {};
+
+      destObj = destObj || {};
+
+      do {
+        props = Object.getOwnPropertyNames(sourceObj);
+        i = props.length;
+        while (i-- > 0) {
+          prop = props[i];
+          if (!merged[prop]) {
+            destObj[prop] = sourceObj[prop];
+            merged[prop] = true;
+          }
+        }
+        sourceObj = Object.getPrototypeOf(sourceObj);
+      } while (sourceObj && (!filter || filter(sourceObj, destObj)) && sourceObj !== Object.prototype);
+
+      return destObj;
+    }
+
+    /*
+     * determines whether a string ends with the characters of a specified string
+     * @param {String} str
+     * @param {String} searchString
+     * @param {Number} [position= 0]
+     * @returns {boolean}
+     */
+    function endsWith(str, searchString, position) {
+      str = String(str);
+      if (position === undefined || position > str.length) {
+        position = str.length;
+      }
+      position -= searchString.length;
+      var lastIndex = str.indexOf(searchString, position);
+      return lastIndex !== -1 && lastIndex === position;
+    }
+
+
+    /**
+     * Returns new array from array like object
+     * @param {*} [thing]
+     * @returns {Array}
+     */
+    function toArray(thing) {
+      if (!thing) return null;
+      var i = thing.length;
+      if (isUndefined$1(i)) return null;
+      var arr = new Array(i);
+      while (i-- > 0) {
+        arr[i] = thing[i];
+      }
+      return arr;
+    }
+
+    // eslint-disable-next-line func-names
+    var isTypedArray = (function(TypedArray) {
+      // eslint-disable-next-line func-names
+      return function(thing) {
+        return TypedArray && thing instanceof TypedArray;
+      };
+    })(typeof Uint8Array !== 'undefined' && Object.getPrototypeOf(Uint8Array));
+
+    var utils = {
+      isArray: isArray,
+      isArrayBuffer: isArrayBuffer,
+      isBuffer: isBuffer,
+      isFormData: isFormData,
+      isArrayBufferView: isArrayBufferView,
+      isString: isString,
+      isNumber: isNumber$1,
+      isObject: isObject,
+      isPlainObject: isPlainObject,
+      isUndefined: isUndefined$1,
+      isDate: isDate,
+      isFile: isFile,
+      isBlob: isBlob,
+      isFunction: isFunction$1,
+      isStream: isStream,
+      isURLSearchParams: isURLSearchParams,
+      isStandardBrowserEnv: isStandardBrowserEnv,
+      forEach: forEach,
+      merge: merge,
+      extend: extend,
+      trim: trim,
+      stripBOM: stripBOM,
+      inherits: inherits,
+      toFlatObject: toFlatObject,
+      kindOf: kindOf,
+      kindOfTest: kindOfTest,
+      endsWith: endsWith,
+      toArray: toArray,
+      isTypedArray: isTypedArray,
+      isFileList: isFileList
+    };
+
+    function encode(val) {
+      return encodeURIComponent(val).
+        replace(/%3A/gi, ':').
+        replace(/%24/g, '$').
+        replace(/%2C/gi, ',').
+        replace(/%20/g, '+').
+        replace(/%5B/gi, '[').
+        replace(/%5D/gi, ']');
+    }
+
+    /**
+     * Build a URL by appending params to the end
+     *
+     * @param {string} url The base of the url (e.g., http://www.google.com)
+     * @param {object} [params] The params to be appended
+     * @returns {string} The formatted url
+     */
+    var buildURL = function buildURL(url, params, paramsSerializer) {
+      /*eslint no-param-reassign:0*/
+      if (!params) {
+        return url;
+      }
+
+      var serializedParams;
+      if (paramsSerializer) {
+        serializedParams = paramsSerializer(params);
+      } else if (utils.isURLSearchParams(params)) {
+        serializedParams = params.toString();
+      } else {
+        var parts = [];
+
+        utils.forEach(params, function serialize(val, key) {
+          if (val === null || typeof val === 'undefined') {
+            return;
+          }
+
+          if (utils.isArray(val)) {
+            key = key + '[]';
+          } else {
+            val = [val];
+          }
+
+          utils.forEach(val, function parseValue(v) {
+            if (utils.isDate(v)) {
+              v = v.toISOString();
+            } else if (utils.isObject(v)) {
+              v = JSON.stringify(v);
+            }
+            parts.push(encode(key) + '=' + encode(v));
+          });
+        });
+
+        serializedParams = parts.join('&');
+      }
+
+      if (serializedParams) {
+        var hashmarkIndex = url.indexOf('#');
+        if (hashmarkIndex !== -1) {
+          url = url.slice(0, hashmarkIndex);
+        }
+
+        url += (url.indexOf('?') === -1 ? '?' : '&') + serializedParams;
+      }
+
+      return url;
+    };
+
+    function InterceptorManager() {
+      this.handlers = [];
+    }
+
+    /**
+     * Add a new interceptor to the stack
+     *
+     * @param {Function} fulfilled The function to handle `then` for a `Promise`
+     * @param {Function} rejected The function to handle `reject` for a `Promise`
+     *
+     * @return {Number} An ID used to remove interceptor later
+     */
+    InterceptorManager.prototype.use = function use(fulfilled, rejected, options) {
+      this.handlers.push({
+        fulfilled: fulfilled,
+        rejected: rejected,
+        synchronous: options ? options.synchronous : false,
+        runWhen: options ? options.runWhen : null
+      });
+      return this.handlers.length - 1;
+    };
+
+    /**
+     * Remove an interceptor from the stack
+     *
+     * @param {Number} id The ID that was returned by `use`
+     */
+    InterceptorManager.prototype.eject = function eject(id) {
+      if (this.handlers[id]) {
+        this.handlers[id] = null;
+      }
+    };
+
+    /**
+     * Iterate over all the registered interceptors
+     *
+     * This method is particularly useful for skipping over any
+     * interceptors that may have become `null` calling `eject`.
+     *
+     * @param {Function} fn The function to call for each interceptor
+     */
+    InterceptorManager.prototype.forEach = function forEach(fn) {
+      utils.forEach(this.handlers, function forEachHandler(h) {
+        if (h !== null) {
+          fn(h);
+        }
+      });
+    };
+
+    var InterceptorManager_1 = InterceptorManager;
+
+    var normalizeHeaderName = function normalizeHeaderName(headers, normalizedName) {
+      utils.forEach(headers, function processHeader(value, name) {
+        if (name !== normalizedName && name.toUpperCase() === normalizedName.toUpperCase()) {
+          headers[normalizedName] = value;
+          delete headers[name];
+        }
+      });
+    };
+
+    /**
+     * Create an Error with the specified message, config, error code, request and response.
+     *
+     * @param {string} message The error message.
+     * @param {string} [code] The error code (for example, 'ECONNABORTED').
+     * @param {Object} [config] The config.
+     * @param {Object} [request] The request.
+     * @param {Object} [response] The response.
+     * @returns {Error} The created error.
+     */
+    function AxiosError(message, code, config, request, response) {
+      Error.call(this);
+      this.message = message;
+      this.name = 'AxiosError';
+      code && (this.code = code);
+      config && (this.config = config);
+      request && (this.request = request);
+      response && (this.response = response);
+    }
+
+    utils.inherits(AxiosError, Error, {
+      toJSON: function toJSON() {
+        return {
+          // Standard
+          message: this.message,
+          name: this.name,
+          // Microsoft
+          description: this.description,
+          number: this.number,
+          // Mozilla
+          fileName: this.fileName,
+          lineNumber: this.lineNumber,
+          columnNumber: this.columnNumber,
+          stack: this.stack,
+          // Axios
+          config: this.config,
+          code: this.code,
+          status: this.response && this.response.status ? this.response.status : null
+        };
+      }
+    });
+
+    var prototype = AxiosError.prototype;
+    var descriptors = {};
+
+    [
+      'ERR_BAD_OPTION_VALUE',
+      'ERR_BAD_OPTION',
+      'ECONNABORTED',
+      'ETIMEDOUT',
+      'ERR_NETWORK',
+      'ERR_FR_TOO_MANY_REDIRECTS',
+      'ERR_DEPRECATED',
+      'ERR_BAD_RESPONSE',
+      'ERR_BAD_REQUEST',
+      'ERR_CANCELED'
+    // eslint-disable-next-line func-names
+    ].forEach(function(code) {
+      descriptors[code] = {value: code};
+    });
+
+    Object.defineProperties(AxiosError, descriptors);
+    Object.defineProperty(prototype, 'isAxiosError', {value: true});
+
+    // eslint-disable-next-line func-names
+    AxiosError.from = function(error, code, config, request, response, customProps) {
+      var axiosError = Object.create(prototype);
+
+      utils.toFlatObject(error, axiosError, function filter(obj) {
+        return obj !== Error.prototype;
+      });
+
+      AxiosError.call(axiosError, error.message, code, config, request, response);
+
+      axiosError.name = error.name;
+
+      customProps && Object.assign(axiosError, customProps);
+
+      return axiosError;
+    };
+
+    var AxiosError_1 = AxiosError;
+
+    var transitional = {
+      silentJSONParsing: true,
+      forcedJSONParsing: true,
+      clarifyTimeoutError: false
+    };
+
+    /**
+     * Convert a data object to FormData
+     * @param {Object} obj
+     * @param {?Object} [formData]
+     * @returns {Object}
+     **/
+
+    function toFormData(obj, formData) {
+      // eslint-disable-next-line no-param-reassign
+      formData = formData || new FormData();
+
+      var stack = [];
+
+      function convertValue(value) {
+        if (value === null) return '';
+
+        if (utils.isDate(value)) {
+          return value.toISOString();
+        }
+
+        if (utils.isArrayBuffer(value) || utils.isTypedArray(value)) {
+          return typeof Blob === 'function' ? new Blob([value]) : Buffer.from(value);
+        }
+
+        return value;
+      }
+
+      function build(data, parentKey) {
+        if (utils.isPlainObject(data) || utils.isArray(data)) {
+          if (stack.indexOf(data) !== -1) {
+            throw Error('Circular reference detected in ' + parentKey);
+          }
+
+          stack.push(data);
+
+          utils.forEach(data, function each(value, key) {
+            if (utils.isUndefined(value)) return;
+            var fullKey = parentKey ? parentKey + '.' + key : key;
+            var arr;
+
+            if (value && !parentKey && typeof value === 'object') {
+              if (utils.endsWith(key, '{}')) {
+                // eslint-disable-next-line no-param-reassign
+                value = JSON.stringify(value);
+              } else if (utils.endsWith(key, '[]') && (arr = utils.toArray(value))) {
+                // eslint-disable-next-line func-names
+                arr.forEach(function(el) {
+                  !utils.isUndefined(el) && formData.append(fullKey, convertValue(el));
+                });
+                return;
+              }
+            }
+
+            build(value, fullKey);
+          });
+
+          stack.pop();
+        } else {
+          formData.append(parentKey, convertValue(data));
+        }
+      }
+
+      build(obj);
+
+      return formData;
+    }
+
+    var toFormData_1 = toFormData;
+
+    /**
+     * Resolve or reject a Promise based on response status.
+     *
+     * @param {Function} resolve A function that resolves the promise.
+     * @param {Function} reject A function that rejects the promise.
+     * @param {object} response The response.
+     */
+    var settle = function settle(resolve, reject, response) {
+      var validateStatus = response.config.validateStatus;
+      if (!response.status || !validateStatus || validateStatus(response.status)) {
+        resolve(response);
+      } else {
+        reject(new AxiosError_1(
+          'Request failed with status code ' + response.status,
+          [AxiosError_1.ERR_BAD_REQUEST, AxiosError_1.ERR_BAD_RESPONSE][Math.floor(response.status / 100) - 4],
+          response.config,
+          response.request,
+          response
+        ));
+      }
+    };
+
+    var cookies = (
+      utils.isStandardBrowserEnv() ?
+
+      // Standard browser envs support document.cookie
+        (function standardBrowserEnv() {
+          return {
+            write: function write(name, value, expires, path, domain, secure) {
+              var cookie = [];
+              cookie.push(name + '=' + encodeURIComponent(value));
+
+              if (utils.isNumber(expires)) {
+                cookie.push('expires=' + new Date(expires).toGMTString());
+              }
+
+              if (utils.isString(path)) {
+                cookie.push('path=' + path);
+              }
+
+              if (utils.isString(domain)) {
+                cookie.push('domain=' + domain);
+              }
+
+              if (secure === true) {
+                cookie.push('secure');
+              }
+
+              document.cookie = cookie.join('; ');
+            },
+
+            read: function read(name) {
+              var match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+              return (match ? decodeURIComponent(match[3]) : null);
+            },
+
+            remove: function remove(name) {
+              this.write(name, '', Date.now() - 86400000);
+            }
+          };
+        })() :
+
+      // Non standard browser env (web workers, react-native) lack needed support.
+        (function nonStandardBrowserEnv() {
+          return {
+            write: function write() {},
+            read: function read() { return null; },
+            remove: function remove() {}
+          };
+        })()
+    );
+
+    /**
+     * Determines whether the specified URL is absolute
+     *
+     * @param {string} url The URL to test
+     * @returns {boolean} True if the specified URL is absolute, otherwise false
+     */
+    var isAbsoluteURL = function isAbsoluteURL(url) {
+      // A URL is considered absolute if it begins with "<scheme>://" or "//" (protocol-relative URL).
+      // RFC 3986 defines scheme name as a sequence of characters beginning with a letter and followed
+      // by any combination of letters, digits, plus, period, or hyphen.
+      return /^([a-z][a-z\d+\-.]*:)?\/\//i.test(url);
+    };
+
+    /**
+     * Creates a new URL by combining the specified URLs
+     *
+     * @param {string} baseURL The base URL
+     * @param {string} relativeURL The relative URL
+     * @returns {string} The combined URL
+     */
+    var combineURLs = function combineURLs(baseURL, relativeURL) {
+      return relativeURL
+        ? baseURL.replace(/\/+$/, '') + '/' + relativeURL.replace(/^\/+/, '')
+        : baseURL;
+    };
+
+    /**
+     * Creates a new URL by combining the baseURL with the requestedURL,
+     * only when the requestedURL is not already an absolute URL.
+     * If the requestURL is absolute, this function returns the requestedURL untouched.
+     *
+     * @param {string} baseURL The base URL
+     * @param {string} requestedURL Absolute or relative URL to combine
+     * @returns {string} The combined full path
+     */
+    var buildFullPath = function buildFullPath(baseURL, requestedURL) {
+      if (baseURL && !isAbsoluteURL(requestedURL)) {
+        return combineURLs(baseURL, requestedURL);
+      }
+      return requestedURL;
+    };
+
+    // Headers whose duplicates are ignored by node
+    // c.f. https://nodejs.org/api/http.html#http_message_headers
+    var ignoreDuplicateOf = [
+      'age', 'authorization', 'content-length', 'content-type', 'etag',
+      'expires', 'from', 'host', 'if-modified-since', 'if-unmodified-since',
+      'last-modified', 'location', 'max-forwards', 'proxy-authorization',
+      'referer', 'retry-after', 'user-agent'
+    ];
+
+    /**
+     * Parse headers into an object
+     *
+     * ```
+     * Date: Wed, 27 Aug 2014 08:58:49 GMT
+     * Content-Type: application/json
+     * Connection: keep-alive
+     * Transfer-Encoding: chunked
+     * ```
+     *
+     * @param {String} headers Headers needing to be parsed
+     * @returns {Object} Headers parsed into an object
+     */
+    var parseHeaders = function parseHeaders(headers) {
+      var parsed = {};
+      var key;
+      var val;
+      var i;
+
+      if (!headers) { return parsed; }
+
+      utils.forEach(headers.split('\n'), function parser(line) {
+        i = line.indexOf(':');
+        key = utils.trim(line.substr(0, i)).toLowerCase();
+        val = utils.trim(line.substr(i + 1));
+
+        if (key) {
+          if (parsed[key] && ignoreDuplicateOf.indexOf(key) >= 0) {
+            return;
+          }
+          if (key === 'set-cookie') {
+            parsed[key] = (parsed[key] ? parsed[key] : []).concat([val]);
+          } else {
+            parsed[key] = parsed[key] ? parsed[key] + ', ' + val : val;
+          }
+        }
+      });
+
+      return parsed;
+    };
+
+    var isURLSameOrigin = (
+      utils.isStandardBrowserEnv() ?
+
+      // Standard browser envs have full support of the APIs needed to test
+      // whether the request URL is of the same origin as current location.
+        (function standardBrowserEnv() {
+          var msie = /(msie|trident)/i.test(navigator.userAgent);
+          var urlParsingNode = document.createElement('a');
+          var originURL;
+
+          /**
+        * Parse a URL to discover it's components
+        *
+        * @param {String} url The URL to be parsed
+        * @returns {Object}
+        */
+          function resolveURL(url) {
+            var href = url;
+
+            if (msie) {
+            // IE needs attribute set twice to normalize properties
+              urlParsingNode.setAttribute('href', href);
+              href = urlParsingNode.href;
+            }
+
+            urlParsingNode.setAttribute('href', href);
+
+            // urlParsingNode provides the UrlUtils interface - http://url.spec.whatwg.org/#urlutils
+            return {
+              href: urlParsingNode.href,
+              protocol: urlParsingNode.protocol ? urlParsingNode.protocol.replace(/:$/, '') : '',
+              host: urlParsingNode.host,
+              search: urlParsingNode.search ? urlParsingNode.search.replace(/^\?/, '') : '',
+              hash: urlParsingNode.hash ? urlParsingNode.hash.replace(/^#/, '') : '',
+              hostname: urlParsingNode.hostname,
+              port: urlParsingNode.port,
+              pathname: (urlParsingNode.pathname.charAt(0) === '/') ?
+                urlParsingNode.pathname :
+                '/' + urlParsingNode.pathname
+            };
+          }
+
+          originURL = resolveURL(window.location.href);
+
+          /**
+        * Determine if a URL shares the same origin as the current location
+        *
+        * @param {String} requestURL The URL to test
+        * @returns {boolean} True if URL shares the same origin, otherwise false
+        */
+          return function isURLSameOrigin(requestURL) {
+            var parsed = (utils.isString(requestURL)) ? resolveURL(requestURL) : requestURL;
+            return (parsed.protocol === originURL.protocol &&
+                parsed.host === originURL.host);
+          };
+        })() :
+
+      // Non standard browser envs (web workers, react-native) lack needed support.
+        (function nonStandardBrowserEnv() {
+          return function isURLSameOrigin() {
+            return true;
+          };
+        })()
+    );
+
+    /**
+     * A `CanceledError` is an object that is thrown when an operation is canceled.
+     *
+     * @class
+     * @param {string=} message The message.
+     */
+    function CanceledError(message) {
+      // eslint-disable-next-line no-eq-null,eqeqeq
+      AxiosError_1.call(this, message == null ? 'canceled' : message, AxiosError_1.ERR_CANCELED);
+      this.name = 'CanceledError';
+    }
+
+    utils.inherits(CanceledError, AxiosError_1, {
+      __CANCEL__: true
+    });
+
+    var CanceledError_1 = CanceledError;
+
+    var parseProtocol = function parseProtocol(url) {
+      var match = /^([-+\w]{1,25})(:?\/\/|:)/.exec(url);
+      return match && match[1] || '';
+    };
+
+    var xhr = function xhrAdapter(config) {
+      return new Promise(function dispatchXhrRequest(resolve, reject) {
+        var requestData = config.data;
+        var requestHeaders = config.headers;
+        var responseType = config.responseType;
+        var onCanceled;
+        function done() {
+          if (config.cancelToken) {
+            config.cancelToken.unsubscribe(onCanceled);
+          }
+
+          if (config.signal) {
+            config.signal.removeEventListener('abort', onCanceled);
+          }
+        }
+
+        if (utils.isFormData(requestData) && utils.isStandardBrowserEnv()) {
+          delete requestHeaders['Content-Type']; // Let the browser set it
+        }
+
+        var request = new XMLHttpRequest();
+
+        // HTTP basic authentication
+        if (config.auth) {
+          var username = config.auth.username || '';
+          var password = config.auth.password ? unescape(encodeURIComponent(config.auth.password)) : '';
+          requestHeaders.Authorization = 'Basic ' + btoa(username + ':' + password);
+        }
+
+        var fullPath = buildFullPath(config.baseURL, config.url);
+
+        request.open(config.method.toUpperCase(), buildURL(fullPath, config.params, config.paramsSerializer), true);
+
+        // Set the request timeout in MS
+        request.timeout = config.timeout;
+
+        function onloadend() {
+          if (!request) {
+            return;
+          }
+          // Prepare the response
+          var responseHeaders = 'getAllResponseHeaders' in request ? parseHeaders(request.getAllResponseHeaders()) : null;
+          var responseData = !responseType || responseType === 'text' ||  responseType === 'json' ?
+            request.responseText : request.response;
+          var response = {
+            data: responseData,
+            status: request.status,
+            statusText: request.statusText,
+            headers: responseHeaders,
+            config: config,
+            request: request
+          };
+
+          settle(function _resolve(value) {
+            resolve(value);
+            done();
+          }, function _reject(err) {
+            reject(err);
+            done();
+          }, response);
+
+          // Clean up request
+          request = null;
+        }
+
+        if ('onloadend' in request) {
+          // Use onloadend if available
+          request.onloadend = onloadend;
+        } else {
+          // Listen for ready state to emulate onloadend
+          request.onreadystatechange = function handleLoad() {
+            if (!request || request.readyState !== 4) {
+              return;
+            }
+
+            // The request errored out and we didn't get a response, this will be
+            // handled by onerror instead
+            // With one exception: request that using file: protocol, most browsers
+            // will return status as 0 even though it's a successful request
+            if (request.status === 0 && !(request.responseURL && request.responseURL.indexOf('file:') === 0)) {
+              return;
+            }
+            // readystate handler is calling before onerror or ontimeout handlers,
+            // so we should call onloadend on the next 'tick'
+            setTimeout(onloadend);
+          };
+        }
+
+        // Handle browser request cancellation (as opposed to a manual cancellation)
+        request.onabort = function handleAbort() {
+          if (!request) {
+            return;
+          }
+
+          reject(new AxiosError_1('Request aborted', AxiosError_1.ECONNABORTED, config, request));
+
+          // Clean up request
+          request = null;
+        };
+
+        // Handle low level network errors
+        request.onerror = function handleError() {
+          // Real errors are hidden from us by the browser
+          // onerror should only fire if it's a network error
+          reject(new AxiosError_1('Network Error', AxiosError_1.ERR_NETWORK, config, request, request));
+
+          // Clean up request
+          request = null;
+        };
+
+        // Handle timeout
+        request.ontimeout = function handleTimeout() {
+          var timeoutErrorMessage = config.timeout ? 'timeout of ' + config.timeout + 'ms exceeded' : 'timeout exceeded';
+          var transitional$1 = config.transitional || transitional;
+          if (config.timeoutErrorMessage) {
+            timeoutErrorMessage = config.timeoutErrorMessage;
+          }
+          reject(new AxiosError_1(
+            timeoutErrorMessage,
+            transitional$1.clarifyTimeoutError ? AxiosError_1.ETIMEDOUT : AxiosError_1.ECONNABORTED,
+            config,
+            request));
+
+          // Clean up request
+          request = null;
+        };
+
+        // Add xsrf header
+        // This is only done if running in a standard browser environment.
+        // Specifically not if we're in a web worker, or react-native.
+        if (utils.isStandardBrowserEnv()) {
+          // Add xsrf header
+          var xsrfValue = (config.withCredentials || isURLSameOrigin(fullPath)) && config.xsrfCookieName ?
+            cookies.read(config.xsrfCookieName) :
+            undefined;
+
+          if (xsrfValue) {
+            requestHeaders[config.xsrfHeaderName] = xsrfValue;
+          }
+        }
+
+        // Add headers to the request
+        if ('setRequestHeader' in request) {
+          utils.forEach(requestHeaders, function setRequestHeader(val, key) {
+            if (typeof requestData === 'undefined' && key.toLowerCase() === 'content-type') {
+              // Remove Content-Type if data is undefined
+              delete requestHeaders[key];
+            } else {
+              // Otherwise add header to the request
+              request.setRequestHeader(key, val);
+            }
+          });
+        }
+
+        // Add withCredentials to request if needed
+        if (!utils.isUndefined(config.withCredentials)) {
+          request.withCredentials = !!config.withCredentials;
+        }
+
+        // Add responseType to request if needed
+        if (responseType && responseType !== 'json') {
+          request.responseType = config.responseType;
+        }
+
+        // Handle progress if needed
+        if (typeof config.onDownloadProgress === 'function') {
+          request.addEventListener('progress', config.onDownloadProgress);
+        }
+
+        // Not all browsers support upload events
+        if (typeof config.onUploadProgress === 'function' && request.upload) {
+          request.upload.addEventListener('progress', config.onUploadProgress);
+        }
+
+        if (config.cancelToken || config.signal) {
+          // Handle cancellation
+          // eslint-disable-next-line func-names
+          onCanceled = function(cancel) {
+            if (!request) {
+              return;
+            }
+            reject(!cancel || (cancel && cancel.type) ? new CanceledError_1() : cancel);
+            request.abort();
+            request = null;
+          };
+
+          config.cancelToken && config.cancelToken.subscribe(onCanceled);
+          if (config.signal) {
+            config.signal.aborted ? onCanceled() : config.signal.addEventListener('abort', onCanceled);
+          }
+        }
+
+        if (!requestData) {
+          requestData = null;
+        }
+
+        var protocol = parseProtocol(fullPath);
+
+        if (protocol && [ 'http', 'https', 'file' ].indexOf(protocol) === -1) {
+          reject(new AxiosError_1('Unsupported protocol ' + protocol + ':', AxiosError_1.ERR_BAD_REQUEST, config));
+          return;
+        }
+
+
+        // Send the request
+        request.send(requestData);
+      });
+    };
+
+    // eslint-disable-next-line strict
+    var _null = null;
+
+    var DEFAULT_CONTENT_TYPE = {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    };
+
+    function setContentTypeIfUnset(headers, value) {
+      if (!utils.isUndefined(headers) && utils.isUndefined(headers['Content-Type'])) {
+        headers['Content-Type'] = value;
+      }
+    }
+
+    function getDefaultAdapter() {
+      var adapter;
+      if (typeof XMLHttpRequest !== 'undefined') {
+        // For browsers use XHR adapter
+        adapter = xhr;
+      } else if (typeof process !== 'undefined' && Object.prototype.toString.call(process) === '[object process]') {
+        // For node use HTTP adapter
+        adapter = xhr;
+      }
+      return adapter;
+    }
+
+    function stringifySafely(rawValue, parser, encoder) {
+      if (utils.isString(rawValue)) {
+        try {
+          (parser || JSON.parse)(rawValue);
+          return utils.trim(rawValue);
+        } catch (e) {
+          if (e.name !== 'SyntaxError') {
+            throw e;
+          }
+        }
+      }
+
+      return (encoder || JSON.stringify)(rawValue);
+    }
+
+    var defaults = {
+
+      transitional: transitional,
+
+      adapter: getDefaultAdapter(),
+
+      transformRequest: [function transformRequest(data, headers) {
+        normalizeHeaderName(headers, 'Accept');
+        normalizeHeaderName(headers, 'Content-Type');
+
+        if (utils.isFormData(data) ||
+          utils.isArrayBuffer(data) ||
+          utils.isBuffer(data) ||
+          utils.isStream(data) ||
+          utils.isFile(data) ||
+          utils.isBlob(data)
+        ) {
+          return data;
+        }
+        if (utils.isArrayBufferView(data)) {
+          return data.buffer;
+        }
+        if (utils.isURLSearchParams(data)) {
+          setContentTypeIfUnset(headers, 'application/x-www-form-urlencoded;charset=utf-8');
+          return data.toString();
+        }
+
+        var isObjectPayload = utils.isObject(data);
+        var contentType = headers && headers['Content-Type'];
+
+        var isFileList;
+
+        if ((isFileList = utils.isFileList(data)) || (isObjectPayload && contentType === 'multipart/form-data')) {
+          var _FormData = this.env && this.env.FormData;
+          return toFormData_1(isFileList ? {'files[]': data} : data, _FormData && new _FormData());
+        } else if (isObjectPayload || contentType === 'application/json') {
+          setContentTypeIfUnset(headers, 'application/json');
+          return stringifySafely(data);
+        }
+
+        return data;
+      }],
+
+      transformResponse: [function transformResponse(data) {
+        var transitional = this.transitional || defaults.transitional;
+        var silentJSONParsing = transitional && transitional.silentJSONParsing;
+        var forcedJSONParsing = transitional && transitional.forcedJSONParsing;
+        var strictJSONParsing = !silentJSONParsing && this.responseType === 'json';
+
+        if (strictJSONParsing || (forcedJSONParsing && utils.isString(data) && data.length)) {
+          try {
+            return JSON.parse(data);
+          } catch (e) {
+            if (strictJSONParsing) {
+              if (e.name === 'SyntaxError') {
+                throw AxiosError_1.from(e, AxiosError_1.ERR_BAD_RESPONSE, this, null, this.response);
+              }
+              throw e;
+            }
+          }
+        }
+
+        return data;
+      }],
+
+      /**
+       * A timeout in milliseconds to abort a request. If set to 0 (default) a
+       * timeout is not created.
+       */
+      timeout: 0,
+
+      xsrfCookieName: 'XSRF-TOKEN',
+      xsrfHeaderName: 'X-XSRF-TOKEN',
+
+      maxContentLength: -1,
+      maxBodyLength: -1,
+
+      env: {
+        FormData: _null
+      },
+
+      validateStatus: function validateStatus(status) {
+        return status >= 200 && status < 300;
+      },
+
+      headers: {
+        common: {
+          'Accept': 'application/json, text/plain, */*'
+        }
+      }
+    };
+
+    utils.forEach(['delete', 'get', 'head'], function forEachMethodNoData(method) {
+      defaults.headers[method] = {};
+    });
+
+    utils.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
+      defaults.headers[method] = utils.merge(DEFAULT_CONTENT_TYPE);
+    });
+
+    var defaults_1 = defaults;
+
+    /**
+     * Transform the data for a request or a response
+     *
+     * @param {Object|String} data The data to be transformed
+     * @param {Array} headers The headers for the request or response
+     * @param {Array|Function} fns A single function or Array of functions
+     * @returns {*} The resulting transformed data
+     */
+    var transformData = function transformData(data, headers, fns) {
+      var context = this || defaults_1;
+      /*eslint no-param-reassign:0*/
+      utils.forEach(fns, function transform(fn) {
+        data = fn.call(context, data, headers);
+      });
+
+      return data;
+    };
+
+    var isCancel = function isCancel(value) {
+      return !!(value && value.__CANCEL__);
+    };
+
+    /**
+     * Throws a `CanceledError` if cancellation has been requested.
+     */
+    function throwIfCancellationRequested(config) {
+      if (config.cancelToken) {
+        config.cancelToken.throwIfRequested();
+      }
+
+      if (config.signal && config.signal.aborted) {
+        throw new CanceledError_1();
+      }
+    }
+
+    /**
+     * Dispatch a request to the server using the configured adapter.
+     *
+     * @param {object} config The config that is to be used for the request
+     * @returns {Promise} The Promise to be fulfilled
+     */
+    var dispatchRequest = function dispatchRequest(config) {
+      throwIfCancellationRequested(config);
+
+      // Ensure headers exist
+      config.headers = config.headers || {};
+
+      // Transform request data
+      config.data = transformData.call(
+        config,
+        config.data,
+        config.headers,
+        config.transformRequest
+      );
+
+      // Flatten headers
+      config.headers = utils.merge(
+        config.headers.common || {},
+        config.headers[config.method] || {},
+        config.headers
+      );
+
+      utils.forEach(
+        ['delete', 'get', 'head', 'post', 'put', 'patch', 'common'],
+        function cleanHeaderConfig(method) {
+          delete config.headers[method];
+        }
+      );
+
+      var adapter = config.adapter || defaults_1.adapter;
+
+      return adapter(config).then(function onAdapterResolution(response) {
+        throwIfCancellationRequested(config);
+
+        // Transform response data
+        response.data = transformData.call(
+          config,
+          response.data,
+          response.headers,
+          config.transformResponse
+        );
+
+        return response;
+      }, function onAdapterRejection(reason) {
+        if (!isCancel(reason)) {
+          throwIfCancellationRequested(config);
+
+          // Transform response data
+          if (reason && reason.response) {
+            reason.response.data = transformData.call(
+              config,
+              reason.response.data,
+              reason.response.headers,
+              config.transformResponse
+            );
+          }
+        }
+
+        return Promise.reject(reason);
+      });
+    };
+
+    /**
+     * Config-specific merge-function which creates a new config-object
+     * by merging two configuration objects together.
+     *
+     * @param {Object} config1
+     * @param {Object} config2
+     * @returns {Object} New object resulting from merging config2 to config1
+     */
+    var mergeConfig = function mergeConfig(config1, config2) {
+      // eslint-disable-next-line no-param-reassign
+      config2 = config2 || {};
+      var config = {};
+
+      function getMergedValue(target, source) {
+        if (utils.isPlainObject(target) && utils.isPlainObject(source)) {
+          return utils.merge(target, source);
+        } else if (utils.isPlainObject(source)) {
+          return utils.merge({}, source);
+        } else if (utils.isArray(source)) {
+          return source.slice();
+        }
+        return source;
+      }
+
+      // eslint-disable-next-line consistent-return
+      function mergeDeepProperties(prop) {
+        if (!utils.isUndefined(config2[prop])) {
+          return getMergedValue(config1[prop], config2[prop]);
+        } else if (!utils.isUndefined(config1[prop])) {
+          return getMergedValue(undefined, config1[prop]);
+        }
+      }
+
+      // eslint-disable-next-line consistent-return
+      function valueFromConfig2(prop) {
+        if (!utils.isUndefined(config2[prop])) {
+          return getMergedValue(undefined, config2[prop]);
+        }
+      }
+
+      // eslint-disable-next-line consistent-return
+      function defaultToConfig2(prop) {
+        if (!utils.isUndefined(config2[prop])) {
+          return getMergedValue(undefined, config2[prop]);
+        } else if (!utils.isUndefined(config1[prop])) {
+          return getMergedValue(undefined, config1[prop]);
+        }
+      }
+
+      // eslint-disable-next-line consistent-return
+      function mergeDirectKeys(prop) {
+        if (prop in config2) {
+          return getMergedValue(config1[prop], config2[prop]);
+        } else if (prop in config1) {
+          return getMergedValue(undefined, config1[prop]);
+        }
+      }
+
+      var mergeMap = {
+        'url': valueFromConfig2,
+        'method': valueFromConfig2,
+        'data': valueFromConfig2,
+        'baseURL': defaultToConfig2,
+        'transformRequest': defaultToConfig2,
+        'transformResponse': defaultToConfig2,
+        'paramsSerializer': defaultToConfig2,
+        'timeout': defaultToConfig2,
+        'timeoutMessage': defaultToConfig2,
+        'withCredentials': defaultToConfig2,
+        'adapter': defaultToConfig2,
+        'responseType': defaultToConfig2,
+        'xsrfCookieName': defaultToConfig2,
+        'xsrfHeaderName': defaultToConfig2,
+        'onUploadProgress': defaultToConfig2,
+        'onDownloadProgress': defaultToConfig2,
+        'decompress': defaultToConfig2,
+        'maxContentLength': defaultToConfig2,
+        'maxBodyLength': defaultToConfig2,
+        'beforeRedirect': defaultToConfig2,
+        'transport': defaultToConfig2,
+        'httpAgent': defaultToConfig2,
+        'httpsAgent': defaultToConfig2,
+        'cancelToken': defaultToConfig2,
+        'socketPath': defaultToConfig2,
+        'responseEncoding': defaultToConfig2,
+        'validateStatus': mergeDirectKeys
+      };
+
+      utils.forEach(Object.keys(config1).concat(Object.keys(config2)), function computeConfigValue(prop) {
+        var merge = mergeMap[prop] || mergeDeepProperties;
+        var configValue = merge(prop);
+        (utils.isUndefined(configValue) && merge !== mergeDirectKeys) || (config[prop] = configValue);
+      });
+
+      return config;
+    };
+
+    var data = {
+      "version": "0.27.2"
+    };
+
+    var VERSION = data.version;
+
+
+    var validators$1 = {};
+
+    // eslint-disable-next-line func-names
+    ['object', 'boolean', 'number', 'function', 'string', 'symbol'].forEach(function(type, i) {
+      validators$1[type] = function validator(thing) {
+        return typeof thing === type || 'a' + (i < 1 ? 'n ' : ' ') + type;
+      };
+    });
+
+    var deprecatedWarnings = {};
+
+    /**
+     * Transitional option validator
+     * @param {function|boolean?} validator - set to false if the transitional option has been removed
+     * @param {string?} version - deprecated version / removed since version
+     * @param {string?} message - some message with additional info
+     * @returns {function}
+     */
+    validators$1.transitional = function transitional(validator, version, message) {
+      function formatMessage(opt, desc) {
+        return '[Axios v' + VERSION + '] Transitional option \'' + opt + '\'' + desc + (message ? '. ' + message : '');
+      }
+
+      // eslint-disable-next-line func-names
+      return function(value, opt, opts) {
+        if (validator === false) {
+          throw new AxiosError_1(
+            formatMessage(opt, ' has been removed' + (version ? ' in ' + version : '')),
+            AxiosError_1.ERR_DEPRECATED
+          );
+        }
+
+        if (version && !deprecatedWarnings[opt]) {
+          deprecatedWarnings[opt] = true;
+          // eslint-disable-next-line no-console
+          console.warn(
+            formatMessage(
+              opt,
+              ' has been deprecated since v' + version + ' and will be removed in the near future'
+            )
+          );
+        }
+
+        return validator ? validator(value, opt, opts) : true;
+      };
+    };
+
+    /**
+     * Assert object's properties type
+     * @param {object} options
+     * @param {object} schema
+     * @param {boolean?} allowUnknown
+     */
+
+    function assertOptions(options, schema, allowUnknown) {
+      if (typeof options !== 'object') {
+        throw new AxiosError_1('options must be an object', AxiosError_1.ERR_BAD_OPTION_VALUE);
+      }
+      var keys = Object.keys(options);
+      var i = keys.length;
+      while (i-- > 0) {
+        var opt = keys[i];
+        var validator = schema[opt];
+        if (validator) {
+          var value = options[opt];
+          var result = value === undefined || validator(value, opt, options);
+          if (result !== true) {
+            throw new AxiosError_1('option ' + opt + ' must be ' + result, AxiosError_1.ERR_BAD_OPTION_VALUE);
+          }
+          continue;
+        }
+        if (allowUnknown !== true) {
+          throw new AxiosError_1('Unknown option ' + opt, AxiosError_1.ERR_BAD_OPTION);
+        }
+      }
+    }
+
+    var validator = {
+      assertOptions: assertOptions,
+      validators: validators$1
+    };
+
+    var validators = validator.validators;
+    /**
+     * Create a new instance of Axios
+     *
+     * @param {Object} instanceConfig The default config for the instance
+     */
+    function Axios(instanceConfig) {
+      this.defaults = instanceConfig;
+      this.interceptors = {
+        request: new InterceptorManager_1(),
+        response: new InterceptorManager_1()
+      };
+    }
+
+    /**
+     * Dispatch a request
+     *
+     * @param {Object} config The config specific for this request (merged with this.defaults)
+     */
+    Axios.prototype.request = function request(configOrUrl, config) {
+      /*eslint no-param-reassign:0*/
+      // Allow for axios('example/url'[, config]) a la fetch API
+      if (typeof configOrUrl === 'string') {
+        config = config || {};
+        config.url = configOrUrl;
+      } else {
+        config = configOrUrl || {};
+      }
+
+      config = mergeConfig(this.defaults, config);
+
+      // Set config.method
+      if (config.method) {
+        config.method = config.method.toLowerCase();
+      } else if (this.defaults.method) {
+        config.method = this.defaults.method.toLowerCase();
+      } else {
+        config.method = 'get';
+      }
+
+      var transitional = config.transitional;
+
+      if (transitional !== undefined) {
+        validator.assertOptions(transitional, {
+          silentJSONParsing: validators.transitional(validators.boolean),
+          forcedJSONParsing: validators.transitional(validators.boolean),
+          clarifyTimeoutError: validators.transitional(validators.boolean)
+        }, false);
+      }
+
+      // filter out skipped interceptors
+      var requestInterceptorChain = [];
+      var synchronousRequestInterceptors = true;
+      this.interceptors.request.forEach(function unshiftRequestInterceptors(interceptor) {
+        if (typeof interceptor.runWhen === 'function' && interceptor.runWhen(config) === false) {
+          return;
+        }
+
+        synchronousRequestInterceptors = synchronousRequestInterceptors && interceptor.synchronous;
+
+        requestInterceptorChain.unshift(interceptor.fulfilled, interceptor.rejected);
+      });
+
+      var responseInterceptorChain = [];
+      this.interceptors.response.forEach(function pushResponseInterceptors(interceptor) {
+        responseInterceptorChain.push(interceptor.fulfilled, interceptor.rejected);
+      });
+
+      var promise;
+
+      if (!synchronousRequestInterceptors) {
+        var chain = [dispatchRequest, undefined];
+
+        Array.prototype.unshift.apply(chain, requestInterceptorChain);
+        chain = chain.concat(responseInterceptorChain);
+
+        promise = Promise.resolve(config);
+        while (chain.length) {
+          promise = promise.then(chain.shift(), chain.shift());
+        }
+
+        return promise;
+      }
+
+
+      var newConfig = config;
+      while (requestInterceptorChain.length) {
+        var onFulfilled = requestInterceptorChain.shift();
+        var onRejected = requestInterceptorChain.shift();
+        try {
+          newConfig = onFulfilled(newConfig);
+        } catch (error) {
+          onRejected(error);
+          break;
+        }
+      }
+
+      try {
+        promise = dispatchRequest(newConfig);
+      } catch (error) {
+        return Promise.reject(error);
+      }
+
+      while (responseInterceptorChain.length) {
+        promise = promise.then(responseInterceptorChain.shift(), responseInterceptorChain.shift());
+      }
+
+      return promise;
+    };
+
+    Axios.prototype.getUri = function getUri(config) {
+      config = mergeConfig(this.defaults, config);
+      var fullPath = buildFullPath(config.baseURL, config.url);
+      return buildURL(fullPath, config.params, config.paramsSerializer);
+    };
+
+    // Provide aliases for supported request methods
+    utils.forEach(['delete', 'get', 'head', 'options'], function forEachMethodNoData(method) {
+      /*eslint func-names:0*/
+      Axios.prototype[method] = function(url, config) {
+        return this.request(mergeConfig(config || {}, {
+          method: method,
+          url: url,
+          data: (config || {}).data
+        }));
+      };
+    });
+
+    utils.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
+      /*eslint func-names:0*/
+
+      function generateHTTPMethod(isForm) {
+        return function httpMethod(url, data, config) {
+          return this.request(mergeConfig(config || {}, {
+            method: method,
+            headers: isForm ? {
+              'Content-Type': 'multipart/form-data'
+            } : {},
+            url: url,
+            data: data
+          }));
+        };
+      }
+
+      Axios.prototype[method] = generateHTTPMethod();
+
+      Axios.prototype[method + 'Form'] = generateHTTPMethod(true);
+    });
+
+    var Axios_1 = Axios;
+
+    /**
+     * A `CancelToken` is an object that can be used to request cancellation of an operation.
+     *
+     * @class
+     * @param {Function} executor The executor function.
+     */
+    function CancelToken(executor) {
+      if (typeof executor !== 'function') {
+        throw new TypeError('executor must be a function.');
+      }
+
+      var resolvePromise;
+
+      this.promise = new Promise(function promiseExecutor(resolve) {
+        resolvePromise = resolve;
+      });
+
+      var token = this;
+
+      // eslint-disable-next-line func-names
+      this.promise.then(function(cancel) {
+        if (!token._listeners) return;
+
+        var i;
+        var l = token._listeners.length;
+
+        for (i = 0; i < l; i++) {
+          token._listeners[i](cancel);
+        }
+        token._listeners = null;
+      });
+
+      // eslint-disable-next-line func-names
+      this.promise.then = function(onfulfilled) {
+        var _resolve;
+        // eslint-disable-next-line func-names
+        var promise = new Promise(function(resolve) {
+          token.subscribe(resolve);
+          _resolve = resolve;
+        }).then(onfulfilled);
+
+        promise.cancel = function reject() {
+          token.unsubscribe(_resolve);
+        };
+
+        return promise;
+      };
+
+      executor(function cancel(message) {
+        if (token.reason) {
+          // Cancellation has already been requested
+          return;
+        }
+
+        token.reason = new CanceledError_1(message);
+        resolvePromise(token.reason);
+      });
+    }
+
+    /**
+     * Throws a `CanceledError` if cancellation has been requested.
+     */
+    CancelToken.prototype.throwIfRequested = function throwIfRequested() {
+      if (this.reason) {
+        throw this.reason;
+      }
+    };
+
+    /**
+     * Subscribe to the cancel signal
+     */
+
+    CancelToken.prototype.subscribe = function subscribe(listener) {
+      if (this.reason) {
+        listener(this.reason);
+        return;
+      }
+
+      if (this._listeners) {
+        this._listeners.push(listener);
+      } else {
+        this._listeners = [listener];
+      }
+    };
+
+    /**
+     * Unsubscribe from the cancel signal
+     */
+
+    CancelToken.prototype.unsubscribe = function unsubscribe(listener) {
+      if (!this._listeners) {
+        return;
+      }
+      var index = this._listeners.indexOf(listener);
+      if (index !== -1) {
+        this._listeners.splice(index, 1);
+      }
+    };
+
+    /**
+     * Returns an object that contains a new `CancelToken` and a function that, when called,
+     * cancels the `CancelToken`.
+     */
+    CancelToken.source = function source() {
+      var cancel;
+      var token = new CancelToken(function executor(c) {
+        cancel = c;
+      });
+      return {
+        token: token,
+        cancel: cancel
+      };
+    };
+
+    var CancelToken_1 = CancelToken;
+
+    /**
+     * Syntactic sugar for invoking a function and expanding an array for arguments.
+     *
+     * Common use case would be to use `Function.prototype.apply`.
+     *
+     *  ```js
+     *  function f(x, y, z) {}
+     *  var args = [1, 2, 3];
+     *  f.apply(null, args);
+     *  ```
+     *
+     * With `spread` this example can be re-written.
+     *
+     *  ```js
+     *  spread(function(x, y, z) {})([1, 2, 3]);
+     *  ```
+     *
+     * @param {Function} callback
+     * @returns {Function}
+     */
+    var spread = function spread(callback) {
+      return function wrap(arr) {
+        return callback.apply(null, arr);
+      };
+    };
+
+    /**
+     * Determines whether the payload is an error thrown by Axios
+     *
+     * @param {*} payload The value to test
+     * @returns {boolean} True if the payload is an error thrown by Axios, otherwise false
+     */
+    var isAxiosError = function isAxiosError(payload) {
+      return utils.isObject(payload) && (payload.isAxiosError === true);
+    };
+
+    /**
+     * Create an instance of Axios
+     *
+     * @param {Object} defaultConfig The default config for the instance
+     * @return {Axios} A new instance of Axios
+     */
+    function createInstance(defaultConfig) {
+      var context = new Axios_1(defaultConfig);
+      var instance = bind(Axios_1.prototype.request, context);
+
+      // Copy axios.prototype to instance
+      utils.extend(instance, Axios_1.prototype, context);
+
+      // Copy context to instance
+      utils.extend(instance, context);
+
+      // Factory for creating new instances
+      instance.create = function create(instanceConfig) {
+        return createInstance(mergeConfig(defaultConfig, instanceConfig));
+      };
+
+      return instance;
+    }
+
+    // Create the default instance to be exported
+    var axios$1 = createInstance(defaults_1);
+
+    // Expose Axios class to allow class inheritance
+    axios$1.Axios = Axios_1;
+
+    // Expose Cancel & CancelToken
+    axios$1.CanceledError = CanceledError_1;
+    axios$1.CancelToken = CancelToken_1;
+    axios$1.isCancel = isCancel;
+    axios$1.VERSION = data.version;
+    axios$1.toFormData = toFormData_1;
+
+    // Expose AxiosError class
+    axios$1.AxiosError = AxiosError_1;
+
+    // alias for CanceledError for backward compatibility
+    axios$1.Cancel = axios$1.CanceledError;
+
+    // Expose all/spread
+    axios$1.all = function all(promises) {
+      return Promise.all(promises);
+    };
+    axios$1.spread = spread;
+
+    // Expose isAxiosError
+    axios$1.isAxiosError = isAxiosError;
+
+    var axios_1 = axios$1;
+
+    // Allow use of default import syntax in TypeScript
+    var _default = axios$1;
+    axios_1.default = _default;
+
+    var axios = axios_1;
 
     /*
      * Adapted from https://github.com/reach/router/blob/b60e6dd781d5d3a4bdaaf4de665649c0f6a7e78d/src/lib/utils.js
@@ -1388,6 +3422,7 @@ var app = (function () {
     const globalHistory = createHistory(
     	canUseDOM && !isEmbeddedPage ? window : createMemorySource(),
     );
+    const { navigate } = globalHistory;
 
     // We need to keep the focus candidate in a separate file, so svelte does
     // not update, when we mutate it.
@@ -1576,7 +3611,7 @@ var app = (function () {
     const file$e = "node_modules\\svelte-navigator\\src\\Router.svelte";
 
     // (195:0) {#if isTopLevelRouter && manageFocus && a11yConfig.announcements}
-    function create_if_block$2(ctx) {
+    function create_if_block$1(ctx) {
     	let div;
     	let t;
 
@@ -1604,7 +3639,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$2.name,
+    		id: create_if_block$1.name,
     		type: "if",
     		source: "(195:0) {#if isTopLevelRouter && manageFocus && a11yConfig.announcements}",
     		ctx
@@ -1621,7 +3656,7 @@ var app = (function () {
     	let current;
     	const default_slot_template = /*#slots*/ ctx[20].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[19], null);
-    	let if_block = /*isTopLevelRouter*/ ctx[2] && /*manageFocus*/ ctx[4] && /*a11yConfig*/ ctx[1].announcements && create_if_block$2(ctx);
+    	let if_block = /*isTopLevelRouter*/ ctx[2] && /*manageFocus*/ ctx[4] && /*a11yConfig*/ ctx[1].announcements && create_if_block$1(ctx);
 
     	const block = {
     		c: function create() {
@@ -2289,7 +4324,7 @@ var app = (function () {
     });
 
     // (97:0) {#if isActive}
-    function create_if_block$1(ctx) {
+    function create_if_block(ctx) {
     	let router;
     	let current;
 
@@ -2336,7 +4371,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$1.name,
+    		id: create_if_block.name,
     		type: "if",
     		source: "(97:0) {#if isActive}",
     		ctx
@@ -2594,7 +4629,7 @@ var app = (function () {
     	let t1;
     	let div1;
     	let current;
-    	let if_block = /*isActive*/ ctx[2] && create_if_block$1(ctx);
+    	let if_block = /*isActive*/ ctx[2] && create_if_block(ctx);
 
     	const block = {
     		c: function create() {
@@ -2632,7 +4667,7 @@ var app = (function () {
     						transition_in(if_block, 1);
     					}
     				} else {
-    					if_block = create_if_block$1(ctx);
+    					if_block = create_if_block(ctx);
     					if_block.c();
     					transition_in(if_block, 1);
     					if_block.m(t1.parentNode, t1);
@@ -3209,13 +5244,13 @@ var app = (function () {
 
     var Link$1 = Link;
 
-    const userData = writable([]);
+    const userData = writable({});
 
     const fetchData = async () => {
       const url = `http://localhost:5000/users`;
       const res = await fetch(url);
       const data = await res.json();
-      console.log("DATA: ", data);
+      //   console.log("DATA: ", data);
       const loadedData = data.map((data, index) => ({
         index: index,
         name: data.name,
@@ -3229,221 +5264,194 @@ var app = (function () {
 
     /* src\components\Login.svelte generated by Svelte v3.49.0 */
 
-    const { console: console_1 } = globals;
+    const { console: console_1$2 } = globals;
     const file$b = "src\\components\\Login.svelte";
-
-    // (13:2) {#if username}
-    function create_if_block(ctx) {
-    	let t_value = /*username*/ ctx[0].name + "";
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			t = text(t_value);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*username*/ 1 && t_value !== (t_value = /*username*/ ctx[0].name + "")) set_data_dev(t, t_value);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block.name,
-    		type: "if",
-    		source: "(13:2) {#if username}",
-    		ctx
-    	});
-
-    	return block;
-    }
 
     function create_fragment$b(ctx) {
     	let main;
-    	let t0;
     	let div7;
     	let div6;
     	let div0;
     	let img;
     	let img_src_value;
-    	let t1;
+    	let t0;
     	let h3;
-    	let t3;
+    	let t2;
     	let div5;
     	let div1;
     	let label0;
-    	let t5;
+    	let t4;
     	let input0;
-    	let t6;
+    	let t5;
     	let div4;
     	let div2;
     	let label1;
-    	let t8;
+    	let t7;
     	let input1;
-    	let t9;
+    	let t8;
     	let div3;
     	let button;
-    	let t11;
+    	let t10;
     	let footer;
     	let p;
+    	let t11;
+    	let t12_value = new Date().getFullYear() + "";
     	let t12;
-    	let t13_value = new Date().getFullYear() + "";
+    	let t13_value = " " + "";
     	let t13;
-    	let t14_value = " " + "";
     	let t14;
-    	let t15;
     	let a;
-    	let t17;
-    	let if_block = /*username*/ ctx[0] && create_if_block(ctx);
+    	let t16;
+    	let mounted;
+    	let dispose;
 
     	const block = {
     		c: function create() {
     			main = element("main");
-    			if (if_block) if_block.c();
-    			t0 = space();
     			div7 = element("div");
     			div6 = element("div");
     			div0 = element("div");
     			img = element("img");
-    			t1 = space();
+    			t0 = space();
     			h3 = element("h3");
     			h3.textContent = "Task Management System";
-    			t3 = space();
+    			t2 = space();
     			div5 = element("div");
     			div1 = element("div");
     			label0 = element("label");
     			label0.textContent = "Username";
-    			t5 = space();
+    			t4 = space();
     			input0 = element("input");
-    			t6 = space();
+    			t5 = space();
     			div4 = element("div");
     			div2 = element("div");
     			label1 = element("label");
     			label1.textContent = "Password";
-    			t8 = space();
+    			t7 = space();
     			input1 = element("input");
-    			t9 = space();
+    			t8 = space();
     			div3 = element("div");
     			button = element("button");
     			button.textContent = "Login";
-    			t11 = space();
+    			t10 = space();
     			footer = element("footer");
     			p = element("p");
-    			t12 = text("Copyright © ");
+    			t11 = text("Copyright © ");
+    			t12 = text(t12_value);
     			t13 = text(t13_value);
-    			t14 = text(t14_value);
-    			t15 = space();
+    			t14 = space();
     			a = element("a");
     			a.textContent = "Task Management System";
-    			t17 = text("\r\n        . All rights reserved.");
+    			t16 = text("\r\n        . All rights reserved.");
     			if (!src_url_equal(img.src, img_src_value = "https://www.outsystems.com/Forge_BL/rest/ComponentThumbnail/GetURL_ComponentThumbnail?ProjectImageId=25068")) attr_dev(img, "src", img_src_value);
     			attr_dev(img, "alt", "logo");
     			attr_dev(img, "class", "svelte-194w2n9");
-    			add_location(img, file$b, 20, 8, 519);
+    			add_location(img, file$b, 59, 8, 1607);
     			attr_dev(div0, "class", "flex justify-center");
-    			add_location(div0, file$b, 19, 6, 476);
+    			add_location(div0, file$b, 58, 6, 1564);
     			attr_dev(h3, "class", "text-2xl font-bold text-center");
-    			add_location(h3, file$b, 25, 6, 703);
+    			add_location(h3, file$b, 64, 6, 1791);
     			attr_dev(label0, "for", "username");
     			attr_dev(label0, "class", "block text-sm text-gray-800");
-    			add_location(label0, file$b, 29, 10, 894);
+    			add_location(label0, file$b, 68, 10, 1982);
     			attr_dev(input0, "type", "text");
     			attr_dev(input0, "class", "block w-full px-4 py-2 mt-2 bg-white border rounded-md focus:border-blue-400 focus:ring-blue-300 focus:outline-none focus:ring focus:ring-opacity-40");
     			attr_dev(input0, "name", "username");
-    			add_location(input0, file$b, 32, 10, 1006);
-    			add_location(div1, file$b, 27, 8, 809);
+    			add_location(input0, file$b, 71, 10, 2094);
+    			add_location(div1, file$b, 66, 8, 1897);
     			attr_dev(label1, "for", "password");
     			attr_dev(label1, "class", "block text-sm text-gray-800");
-    			add_location(label1, file$b, 40, 12, 1325);
+    			add_location(label1, file$b, 80, 12, 2448);
     			attr_dev(input1, "type", "password");
     			attr_dev(input1, "class", "block w-full px-4 py-2 mt-2 bg-white border rounded-md focus:border-blue-400 focus:ring-blue-300 focus:outline-none focus:ring focus:ring-opacity-40");
     			attr_dev(input1, "name", "password");
-    			add_location(input1, file$b, 43, 12, 1443);
-    			add_location(div2, file$b, 39, 10, 1306);
+    			add_location(input1, file$b, 83, 12, 2566);
+    			add_location(div2, file$b, 79, 10, 2429);
     			attr_dev(button, "class", "w-full px-4 py-2 tracking-wide text-white transition-colors duration-200 transform bg-primary rounded-md hover:bg-blue-600 focus:outline-none focus:primary-focus");
-    			add_location(button, file$b, 50, 12, 1761);
+    			add_location(button, file$b, 91, 12, 2921);
     			attr_dev(div3, "class", "mt-6");
-    			add_location(div3, file$b, 49, 10, 1729);
+    			add_location(div3, file$b, 90, 10, 2889);
     			attr_dev(div4, "class", "mt-4");
-    			add_location(div4, file$b, 38, 8, 1276);
+    			add_location(div4, file$b, 78, 8, 2399);
     			attr_dev(div5, "class", "mt-6");
-    			add_location(div5, file$b, 26, 6, 781);
+    			add_location(div5, file$b, 65, 6, 1869);
     			attr_dev(div6, "class", "w-full p-6 m-auto bg-white rounded shadow-lg ring-2 lg:max-w-md");
-    			add_location(div6, file$b, 16, 4, 378);
+    			add_location(div6, file$b, 55, 4, 1466);
     			attr_dev(a, "href", "/");
     			attr_dev(a, "class", "text-muted");
-    			add_location(a, file$b, 69, 8, 2514);
+    			add_location(a, file$b, 111, 8, 3706);
     			attr_dev(p, "class", "m-0");
-    			add_location(p, file$b, 67, 6, 2431);
+    			add_location(p, file$b, 109, 6, 3623);
     			attr_dev(footer, "class", "border-top text-center p-4 bg-base-300 text-base-content");
-    			add_location(footer, file$b, 66, 4, 2350);
+    			add_location(footer, file$b, 108, 4, 3542);
     			attr_dev(div7, "class", "relative flex flex-col justify-center min-h-screen ");
-    			add_location(div7, file$b, 15, 2, 307);
+    			add_location(div7, file$b, 54, 2, 1395);
     			attr_dev(main, "class", "svelte-194w2n9");
-    			add_location(main, file$b, 11, 0, 249);
+    			add_location(main, file$b, 53, 0, 1385);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, main, anchor);
-    			if (if_block) if_block.m(main, null);
-    			append_dev(main, t0);
     			append_dev(main, div7);
     			append_dev(div7, div6);
     			append_dev(div6, div0);
     			append_dev(div0, img);
-    			append_dev(div6, t1);
+    			append_dev(div6, t0);
     			append_dev(div6, h3);
-    			append_dev(div6, t3);
+    			append_dev(div6, t2);
     			append_dev(div6, div5);
     			append_dev(div5, div1);
     			append_dev(div1, label0);
-    			append_dev(div1, t5);
+    			append_dev(div1, t4);
     			append_dev(div1, input0);
-    			append_dev(div5, t6);
+    			set_input_value(input0, /*username*/ ctx[0]);
+    			append_dev(div5, t5);
     			append_dev(div5, div4);
     			append_dev(div4, div2);
     			append_dev(div2, label1);
-    			append_dev(div2, t8);
+    			append_dev(div2, t7);
     			append_dev(div2, input1);
-    			append_dev(div4, t9);
+    			set_input_value(input1, /*password*/ ctx[1]);
+    			append_dev(div4, t8);
     			append_dev(div4, div3);
     			append_dev(div3, button);
-    			append_dev(div7, t11);
+    			append_dev(div7, t10);
     			append_dev(div7, footer);
     			append_dev(footer, p);
+    			append_dev(p, t11);
     			append_dev(p, t12);
     			append_dev(p, t13);
     			append_dev(p, t14);
-    			append_dev(p, t15);
     			append_dev(p, a);
-    			append_dev(p, t17);
+    			append_dev(p, t16);
+
+    			if (!mounted) {
+    				dispose = [
+    					listen_dev(input0, "input", /*input0_input_handler*/ ctx[3]),
+    					listen_dev(input1, "input", /*input1_input_handler*/ ctx[4]),
+    					listen_dev(button, "click", /*Login*/ ctx[2], false, false, false)
+    				];
+
+    				mounted = true;
+    			}
     		},
     		p: function update(ctx, [dirty]) {
-    			if (/*username*/ ctx[0]) {
-    				if (if_block) {
-    					if_block.p(ctx, dirty);
-    				} else {
-    					if_block = create_if_block(ctx);
-    					if_block.c();
-    					if_block.m(main, t0);
-    				}
-    			} else if (if_block) {
-    				if_block.d(1);
-    				if_block = null;
+    			if (dirty & /*username*/ 1 && input0.value !== /*username*/ ctx[0]) {
+    				set_input_value(input0, /*username*/ ctx[0]);
+    			}
+
+    			if (dirty & /*password*/ 2 && input1.value !== /*password*/ ctx[1]) {
+    				set_input_value(input1, /*password*/ ctx[1]);
     			}
     		},
     		i: noop,
     		o: noop,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(main);
-    			if (if_block) if_block.d();
+    			mounted = false;
+    			run_all(dispose);
     		}
     	};
 
@@ -3459,44 +5467,93 @@ var app = (function () {
     }
 
     function instance$b($$self, $$props, $$invalidate) {
+    	let $userData;
+    	validate_store(userData, 'userData');
+    	component_subscribe($$self, userData, $$value => $$invalidate(5, $userData = $$value));
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Login', slots, []);
-    	fetchData();
-    	let username = [];
+    	let username = "";
+    	let password = "";
+    	let loginStatus = false;
 
-    	// console.log($userData);
-    	userData.subscribe(item => {
-    		$$invalidate(0, username = item[0]);
-    		console.log("username: ", username);
-    	});
+    	// $: {
+    	//   console.log(username);
+    	//   console.log(password);
+    	// }
+    	async function Login() {
+    		var loginResponse = await axios.post("/login", { name: username, password });
+    		var loginStatus = loginResponse.data.valid;
+    		console.log("login status: ", loginStatus);
+
+    		if (loginStatus) {
+    			// store status of "loggedin"
+    			//set localstorage *optional
+    			//store username and role
+    			var userResponse = await axios.get(`/user/${username}`);
+
+    			console.log("user res: ", userResponse);
+
+    			userData.set({
+    				name: userResponse.data.name,
+    				usergroup: userResponse.data.usergroup
+    			});
+
+    			// console.log("dataname: ", userResponse);
+    			// console.log("datagroup: ", userResponse.data.usergroup);
+    			console.log("userdata: ", $userData);
+
+    			navigate("/home");
+    		}
+    	}
 
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<Login> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$2.warn(`<Login> was created with unknown prop '${key}'`);
     	});
 
-    	$$self.$capture_state = () => ({ fetchData, userData, username });
+    	function input0_input_handler() {
+    		username = this.value;
+    		$$invalidate(0, username);
+    	}
+
+    	function input1_input_handler() {
+    		password = this.value;
+    		$$invalidate(1, password);
+    	}
+
+    	$$self.$capture_state = () => ({
+    		Axios: axios,
+    		navigate,
+    		userData,
+    		username,
+    		password,
+    		loginStatus,
+    		Login,
+    		$userData
+    	});
 
     	$$self.$inject_state = $$props => {
     		if ('username' in $$props) $$invalidate(0, username = $$props.username);
+    		if ('password' in $$props) $$invalidate(1, password = $$props.password);
+    		if ('loginStatus' in $$props) loginStatus = $$props.loginStatus;
     	};
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [username];
+    	return [username, password, Login, input0_input_handler, input1_input_handler];
     }
 
-    class Login extends SvelteComponentDev {
+    class Login_1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
     		init(this, options, instance$b, create_fragment$b, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
-    			tagName: "Login",
+    			tagName: "Login_1",
     			options,
     			id: create_fragment$b.name
     		});
@@ -3575,9 +5632,17 @@ var app = (function () {
     }
 
     /* src\components\Profile.svelte generated by Svelte v3.49.0 */
+
+    const { console: console_1$1 } = globals;
     const file$9 = "src\\components\\Profile.svelte";
 
-    // (9:8) <Link to="/home" style="color:black">
+    function get_each_context(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[1] = list[i];
+    	return child_ctx;
+    }
+
+    // (11:8) <Link to="/home" style="color:black">
     function create_default_slot_2$3(ctx) {
     	let t;
 
@@ -3597,14 +5662,49 @@ var app = (function () {
     		block,
     		id: create_default_slot_2$3.name,
     		type: "slot",
-    		source: "(9:8) <Link to=\\\"/home\\\" style=\\\"color:black\\\">",
+    		source: "(11:8) <Link to=\\\"/home\\\" style=\\\"color:black\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (35:6) <Link to="/updatepassword">
+    // (35:12) {#each $userData[0].usergroup.split(",") as group}
+    function create_each_block(ctx) {
+    	let p;
+    	let t_value = /*group*/ ctx[1] + "";
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			p = element("p");
+    			t = text(t_value);
+    			add_location(p, file$9, 35, 14, 1205);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, p, anchor);
+    			append_dev(p, t);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*$userData*/ 1 && t_value !== (t_value = /*group*/ ctx[1] + "")) set_data_dev(t, t_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(p);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block.name,
+    		type: "each",
+    		source: "(35:12) {#each $userData[0].usergroup.split(\\\",\\\") as group}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (45:6) <Link to="/updatepassword">
     function create_default_slot_1$8(ctx) {
     	let button;
 
@@ -3614,7 +5714,7 @@ var app = (function () {
     			button.textContent = "Update Password";
     			attr_dev(button, "type", "submit");
     			attr_dev(button, "class", "btn btn-primary ");
-    			add_location(button, file$9, 35, 8, 1118);
+    			add_location(button, file$9, 45, 8, 1424);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, button, anchor);
@@ -3629,14 +5729,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_1$8.name,
     		type: "slot",
-    		source: "(35:6) <Link to=\\\"/updatepassword\\\">",
+    		source: "(45:6) <Link to=\\\"/updatepassword\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (42:6) <Link to="/updateemail">
+    // (52:6) <Link to="/updateemail">
     function create_default_slot$9(ctx) {
     	let button;
 
@@ -3646,7 +5746,7 @@ var app = (function () {
     			button.textContent = "Update Email";
     			attr_dev(button, "type", "button");
     			attr_dev(button, "class", "btn btn-primary");
-    			add_location(button, file$9, 42, 8, 1291);
+    			add_location(button, file$9, 52, 8, 1597);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, button, anchor);
@@ -3661,7 +5761,7 @@ var app = (function () {
     		block,
     		id: create_default_slot$9.name,
     		type: "slot",
-    		source: "(42:6) <Link to=\\\"/updateemail\\\">",
+    		source: "(52:6) <Link to=\\\"/updateemail\\\">",
     		ctx
     	});
 
@@ -3679,24 +5779,29 @@ var app = (function () {
     	let t2;
     	let div1;
     	let strong;
+    	let t3_value = /*$userData*/ ctx[0][0].name + "";
+    	let t3;
     	let t4;
+    	let t5;
     	let div6;
     	let div5;
     	let div4;
     	let div2;
     	let label0;
-    	let t6;
-    	let p;
     	let t7;
+    	let p;
+    	let t8_value = /*$userData*/ ctx[0][0].email + "";
+    	let t8;
+    	let t9;
     	let div3;
     	let label1;
-    	let t9;
+    	let t11;
     	let ul1;
-    	let t10;
+    	let t12;
     	let div9;
     	let div7;
     	let link1;
-    	let t11;
+    	let t13;
     	let div8;
     	let link2;
     	let current;
@@ -3710,6 +5815,14 @@ var app = (function () {
     			},
     			$$inline: true
     		});
+
+    	let each_value = /*$userData*/ ctx[0][0].usergroup.split(",");
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    	}
 
     	link1 = new Link$1({
     			props: {
@@ -3742,58 +5855,65 @@ var app = (function () {
     			t2 = space();
     			div1 = element("div");
     			strong = element("strong");
-    			strong.textContent = "'s Profile";
-    			t4 = space();
+    			t3 = text(t3_value);
+    			t4 = text("'s Profile");
+    			t5 = space();
     			div6 = element("div");
     			div5 = element("div");
     			div4 = element("div");
     			div2 = element("div");
     			label0 = element("label");
     			label0.textContent = "Email";
-    			t6 = space();
-    			p = element("p");
     			t7 = space();
+    			p = element("p");
+    			t8 = text(t8_value);
+    			t9 = space();
     			div3 = element("div");
     			label1 = element("label");
     			label1.textContent = "User Group (s)";
-    			t9 = space();
+    			t11 = space();
     			ul1 = element("ul");
-    			t10 = space();
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			t12 = space();
     			div9 = element("div");
     			div7 = element("div");
     			create_component(link1.$$.fragment);
-    			t11 = space();
+    			t13 = space();
     			div8 = element("div");
     			create_component(link2.$$.fragment);
-    			add_location(li0, file$9, 7, 6, 157);
-    			add_location(li1, file$9, 10, 6, 240);
-    			add_location(ul0, file$9, 6, 4, 145);
+    			add_location(li0, file$9, 9, 6, 255);
+    			add_location(li1, file$9, 12, 6, 338);
+    			add_location(ul0, file$9, 8, 4, 243);
     			attr_dev(div0, "class", "text-sm breadcrumbs m-7");
-    			add_location(div0, file$9, 5, 2, 102);
-    			add_location(strong, file$9, 14, 4, 343);
+    			add_location(div0, file$9, 7, 2, 200);
+    			add_location(strong, file$9, 16, 4, 441);
     			attr_dev(div1, "class", "text-2xl font-bold mb-5 place-self-center ");
-    			add_location(div1, file$9, 13, 2, 281);
+    			add_location(div1, file$9, 15, 2, 379);
     			attr_dev(label0, "class", "block text-black text-sm font-bold mb-2");
-    			add_location(label0, file$9, 21, 10, 641);
-    			add_location(p, file$9, 22, 10, 721);
+    			add_location(label0, file$9, 25, 10, 775);
+    			add_location(p, file$9, 26, 10, 855);
     			attr_dev(div2, "class", "mb-6");
-    			add_location(div2, file$9, 19, 8, 543);
+    			add_location(div2, file$9, 23, 8, 677);
     			attr_dev(label1, "class", "block text-black text-sm font-bold mb-2");
-    			add_location(label1, file$9, 26, 10, 852);
-    			add_location(ul1, file$9, 27, 10, 941);
+    			add_location(label1, file$9, 30, 10, 1006);
+    			add_location(ul1, file$9, 33, 10, 1121);
     			attr_dev(div3, "class", "mb-6");
-    			add_location(div3, file$9, 24, 8, 754);
+    			add_location(div3, file$9, 28, 8, 908);
     			attr_dev(div4, "class", "grid flex-grow h-40 card bg-base-300 rounded-box m-10 pt-4 text-center");
-    			add_location(div4, file$9, 18, 6, 449);
+    			add_location(div4, file$9, 20, 6, 566);
     			attr_dev(div5, "class", "flex flex-col w-full lg:flex-row");
-    			add_location(div5, file$9, 17, 4, 395);
-    			add_location(div6, file$9, 16, 2, 384);
-    			add_location(div7, file$9, 33, 4, 1068);
-    			add_location(div8, file$9, 40, 4, 1244);
+    			add_location(div5, file$9, 19, 4, 512);
+    			add_location(div6, file$9, 18, 2, 501);
+    			add_location(div7, file$9, 43, 4, 1374);
+    			add_location(div8, file$9, 50, 4, 1550);
     			attr_dev(div9, "class", "grid grid-cols-2 place-self-center gap-5 ");
-    			add_location(div9, file$9, 32, 2, 1007);
+    			add_location(div9, file$9, 42, 2, 1313);
     			attr_dev(div10, "class", "flex flex-col w-full");
-    			add_location(div10, file$9, 4, 0, 64);
+    			add_location(div10, file$9, 6, 0, 162);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -3809,24 +5929,32 @@ var app = (function () {
     			append_dev(div10, t2);
     			append_dev(div10, div1);
     			append_dev(div1, strong);
-    			append_dev(div10, t4);
+    			append_dev(strong, t3);
+    			append_dev(strong, t4);
+    			append_dev(div10, t5);
     			append_dev(div10, div6);
     			append_dev(div6, div5);
     			append_dev(div5, div4);
     			append_dev(div4, div2);
     			append_dev(div2, label0);
-    			append_dev(div2, t6);
+    			append_dev(div2, t7);
     			append_dev(div2, p);
-    			append_dev(div4, t7);
+    			append_dev(p, t8);
+    			append_dev(div4, t9);
     			append_dev(div4, div3);
     			append_dev(div3, label1);
-    			append_dev(div3, t9);
+    			append_dev(div3, t11);
     			append_dev(div3, ul1);
-    			append_dev(div10, t10);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(ul1, null);
+    			}
+
+    			append_dev(div10, t12);
     			append_dev(div10, div9);
     			append_dev(div9, div7);
     			mount_component(link1, div7, null);
-    			append_dev(div9, t11);
+    			append_dev(div9, t13);
     			append_dev(div9, div8);
     			mount_component(link2, div8, null);
     			current = true;
@@ -3834,21 +5962,48 @@ var app = (function () {
     		p: function update(ctx, [dirty]) {
     			const link0_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 16) {
     				link0_changes.$$scope = { dirty, ctx };
     			}
 
     			link0.$set(link0_changes);
+    			if ((!current || dirty & /*$userData*/ 1) && t3_value !== (t3_value = /*$userData*/ ctx[0][0].name + "")) set_data_dev(t3, t3_value);
+    			if ((!current || dirty & /*$userData*/ 1) && t8_value !== (t8_value = /*$userData*/ ctx[0][0].email + "")) set_data_dev(t8, t8_value);
+
+    			if (dirty & /*$userData*/ 1) {
+    				each_value = /*$userData*/ ctx[0][0].usergroup.split(",");
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(ul1, null);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value.length;
+    			}
+
     			const link1_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 16) {
     				link1_changes.$$scope = { dirty, ctx };
     			}
 
     			link1.$set(link1_changes);
     			const link2_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 16) {
     				link2_changes.$$scope = { dirty, ctx };
     			}
 
@@ -3870,6 +6025,7 @@ var app = (function () {
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(div10);
     			destroy_component(link0);
+    			destroy_each(each_blocks, detaching);
     			destroy_component(link1);
     			destroy_component(link2);
     		}
@@ -3887,16 +6043,20 @@ var app = (function () {
     }
 
     function instance$9($$self, $$props, $$invalidate) {
+    	let $userData;
+    	validate_store(userData, 'userData');
+    	component_subscribe($$self, userData, $$value => $$invalidate(0, $userData = $$value));
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Profile', slots, []);
+    	console.log("usergroups: ", $userData[0].usergroup);
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Profile> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$1.warn(`<Profile> was created with unknown prop '${key}'`);
     	});
 
-    	$$self.$capture_state = () => ({ Link: Link$1 });
-    	return [];
+    	$$self.$capture_state = () => ({ Link: Link$1, userData, $userData });
+    	return [$userData];
     }
 
     class Profile extends SvelteComponentDev {
@@ -4200,9 +6360,11 @@ var app = (function () {
     }
 
     /* src\components\UpdateEmail.svelte generated by Svelte v3.49.0 */
+
+    const { console: console_1 } = globals;
     const file$7 = "src\\components\\UpdateEmail.svelte";
 
-    // (10:10) <Link to="/home" style="color:black">
+    // (24:10) <Link to="/home" style="color:black">
     function create_default_slot_1$6(ctx) {
     	let t;
 
@@ -4222,14 +6384,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_1$6.name,
     		type: "slot",
-    		source: "(10:10) <Link to=\\\"/home\\\" style=\\\"color:black\\\">",
+    		source: "(24:10) <Link to=\\\"/home\\\" style=\\\"color:black\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (13:10) <Link to="/profile" style="color:black">
+    // (27:10) <Link to="/profile" style="color:black">
     function create_default_slot$7(ctx) {
     	let t;
 
@@ -4249,7 +6411,7 @@ var app = (function () {
     		block,
     		id: create_default_slot$7.name,
     		type: "slot",
-    		source: "(13:10) <Link to=\\\"/profile\\\" style=\\\"color:black\\\">",
+    		source: "(27:10) <Link to=\\\"/profile\\\" style=\\\"color:black\\\">",
     		ctx
     	});
 
@@ -4278,6 +6440,8 @@ var app = (function () {
     	let t6;
     	let button;
     	let current;
+    	let mounted;
+    	let dispose;
 
     	link0 = new Link$1({
     			props: {
@@ -4324,31 +6488,31 @@ var app = (function () {
     			t6 = space();
     			button = element("button");
     			button.textContent = "Update Email";
-    			add_location(li0, file$7, 8, 8, 201);
-    			add_location(li1, file$7, 11, 8, 290);
-    			add_location(li2, file$7, 14, 8, 385);
-    			add_location(ul, file$7, 7, 6, 187);
+    			add_location(li0, file$7, 22, 8, 550);
+    			add_location(li1, file$7, 25, 8, 639);
+    			add_location(li2, file$7, 28, 8, 734);
+    			add_location(ul, file$7, 21, 6, 536);
     			attr_dev(div0, "class", "text-sm breadcrumbs m-7");
-    			add_location(div0, file$7, 6, 4, 142);
+    			add_location(div0, file$7, 20, 4, 491);
     			attr_dev(div1, "class", "flex justify-between");
-    			add_location(div1, file$7, 5, 2, 102);
+    			add_location(div1, file$7, 19, 2, 451);
     			attr_dev(label, "class", "block text-gray-700 text-sm font-bold mb-2");
-    			add_location(label, file$7, 22, 8, 704);
+    			add_location(label, file$7, 38, 8, 1062);
     			attr_dev(input, "class", "shadow appearance-none border rounded w-96 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline");
     			attr_dev(input, "type", "email");
     			attr_dev(input, "name", "email");
-    			add_location(input, file$7, 23, 8, 785);
+    			add_location(input, file$7, 39, 8, 1143);
     			attr_dev(div2, "class", "mb-4");
-    			add_location(div2, file$7, 20, 6, 610);
+    			add_location(div2, file$7, 36, 6, 968);
     			attr_dev(button, "type", "button");
     			attr_dev(button, "class", "btn btn-primary");
-    			add_location(button, file$7, 25, 6, 971);
+    			add_location(button, file$7, 46, 6, 1401);
     			attr_dev(div3, "class", "w-full max-w-lg ml-20 place-self-center");
-    			add_location(div3, file$7, 19, 4, 549);
+    			add_location(div3, file$7, 35, 4, 907);
     			attr_dev(div4, "class", "grid flex-grow card bg-base-300 rounded-box place-items-center m-10 p-10 text-center");
-    			add_location(div4, file$7, 18, 2, 445);
+    			add_location(div4, file$7, 32, 2, 794);
     			attr_dev(div5, "class", "flex flex-col w-full");
-    			add_location(div5, file$7, 4, 0, 64);
+    			add_location(div5, file$7, 18, 0, 413);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -4372,25 +6536,39 @@ var app = (function () {
     			append_dev(div2, label);
     			append_dev(div2, t5);
     			append_dev(div2, input);
+    			set_input_value(input, /*email*/ ctx[0]);
     			append_dev(div3, t6);
     			append_dev(div3, button);
     			current = true;
+
+    			if (!mounted) {
+    				dispose = [
+    					listen_dev(input, "input", /*input_input_handler*/ ctx[2]),
+    					listen_dev(button, "click", /*updateEmail*/ ctx[1], false, false, false)
+    				];
+
+    				mounted = true;
+    			}
     		},
     		p: function update(ctx, [dirty]) {
     			const link0_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 16) {
     				link0_changes.$$scope = { dirty, ctx };
     			}
 
     			link0.$set(link0_changes);
     			const link1_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 16) {
     				link1_changes.$$scope = { dirty, ctx };
     			}
 
     			link1.$set(link1_changes);
+
+    			if (dirty & /*email*/ 1 && input.value !== /*email*/ ctx[0]) {
+    				set_input_value(input, /*email*/ ctx[0]);
+    			}
     		},
     		i: function intro(local) {
     			if (current) return;
@@ -4407,6 +6585,8 @@ var app = (function () {
     			if (detaching) detach_dev(div5);
     			destroy_component(link0);
     			destroy_component(link1);
+    			mounted = false;
+    			run_all(dispose);
     		}
     	};
 
@@ -4422,16 +6602,48 @@ var app = (function () {
     }
 
     function instance$7($$self, $$props, $$invalidate) {
+    	let $userData;
+    	validate_store(userData, 'userData');
+    	component_subscribe($$self, userData, $$value => $$invalidate(3, $userData = $$value));
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('UpdateEmail', slots, []);
+    	let email = "";
+    	console.log("userData", $userData);
+
+    	async function updateEmail() {
+    		var emailResponse = await axios.put("/user/update", { name: $userData[0].name, email });
+    		console.log("email response: ", emailResponse);
+    	}
+
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<UpdateEmail> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<UpdateEmail> was created with unknown prop '${key}'`);
     	});
 
-    	$$self.$capture_state = () => ({ Link: Link$1 });
-    	return [];
+    	function input_input_handler() {
+    		email = this.value;
+    		$$invalidate(0, email);
+    	}
+
+    	$$self.$capture_state = () => ({
+    		Link: Link$1,
+    		Axios: axios,
+    		userData,
+    		email,
+    		updateEmail,
+    		$userData
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('email' in $$props) $$invalidate(0, email = $$props.email);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [email, updateEmail, input_input_handler];
     }
 
     class UpdateEmail extends SvelteComponentDev {
@@ -7006,7 +9218,7 @@ var app = (function () {
     /* src\App.svelte generated by Svelte v3.49.0 */
     const file = "src\\App.svelte";
 
-    // (26:4) <Link to="/home" class="btn btn-ghost normal-case text-xl" style="color:black; text-decoration:none">
+    // (25:8) <Link            to="/home"            class="btn btn-ghost normal-case text-xl"            style="color:black; text-decoration:none"          >
     function create_default_slot_5(ctx) {
     	let t;
 
@@ -7026,14 +9238,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_5.name,
     		type: "slot",
-    		source: "(26:4) <Link to=\\\"/home\\\" class=\\\"btn btn-ghost normal-case text-xl\\\" style=\\\"color:black; text-decoration:none\\\">",
+    		source: "(25:8) <Link            to=\\\"/home\\\"            class=\\\"btn btn-ghost normal-case text-xl\\\"            style=\\\"color:black; text-decoration:none\\\"          >",
     		ctx
     	});
 
     	return block;
     }
 
-    // (29:5) <Link to="/usermanagementsystem" class="btn btn-ghost ml-5 normal-case text-lg" style="color:black; text-decoration:none">
+    // (32:8) <Link            to="/usermanagementsystem"            class="btn btn-ghost ml-5 normal-case text-lg"            style="color:black; text-decoration:none"          >
     function create_default_slot_4(ctx) {
     	let t;
 
@@ -7053,14 +9265,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_4.name,
     		type: "slot",
-    		source: "(29:5) <Link to=\\\"/usermanagementsystem\\\" class=\\\"btn btn-ghost ml-5 normal-case text-lg\\\" style=\\\"color:black; text-decoration:none\\\">",
+    		source: "(32:8) <Link            to=\\\"/usermanagementsystem\\\"            class=\\\"btn btn-ghost ml-5 normal-case text-lg\\\"            style=\\\"color:black; text-decoration:none\\\"          >",
     		ctx
     	});
 
     	return block;
     }
 
-    // (32:5) <Link to="/createapp" class="btn btn-ghost normal-case text-lg" style="color:black; text-decoration:none">
+    // (39:8) <Link            to="/createapp"            class="btn btn-ghost normal-case text-lg"            style="color:black; text-decoration:none"          >
     function create_default_slot_3(ctx) {
     	let t;
 
@@ -7080,14 +9292,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_3.name,
     		type: "slot",
-    		source: "(32:5) <Link to=\\\"/createapp\\\" class=\\\"btn btn-ghost normal-case text-lg\\\" style=\\\"color:black; text-decoration:none\\\">",
+    		source: "(39:8) <Link            to=\\\"/createapp\\\"            class=\\\"btn btn-ghost normal-case text-lg\\\"            style=\\\"color:black; text-decoration:none\\\"          >",
     		ctx
     	});
 
     	return block;
     }
 
-    // (44:7) <Link to="/profile" class="justify-between" style="color:black; text-decoration:none">
+    // (58:14) <Link                  to="/profile"                  class="justify-between"                  style="color:black; text-decoration:none"                >
     function create_default_slot_2(ctx) {
     	let t;
 
@@ -7107,14 +9319,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_2.name,
     		type: "slot",
-    		source: "(44:7) <Link to=\\\"/profile\\\" class=\\\"justify-between\\\" style=\\\"color:black; text-decoration:none\\\">",
+    		source: "(58:14) <Link                  to=\\\"/profile\\\"                  class=\\\"justify-between\\\"                  style=\\\"color:black; text-decoration:none\\\"                >",
     		ctx
     	});
 
     	return block;
     }
 
-    // (49:7) <Link to="/" style="color:black; text-decoration:none">
+    // (67:14) <Link to="/" style="color:black; text-decoration:none">
     function create_default_slot_1(ctx) {
     	let t;
 
@@ -7134,14 +9346,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_1.name,
     		type: "slot",
-    		source: "(49:7) <Link to=\\\"/\\\" style=\\\"color:black; text-decoration:none\\\">",
+    		source: "(67:14) <Link to=\\\"/\\\" style=\\\"color:black; text-decoration:none\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (23:1) <Router>
+    // (22:2) <Router>
     function create_default_slot(ctx) {
     	let div3;
     	let div0;
@@ -7241,7 +9453,7 @@ var app = (function () {
     		});
 
     	route0 = new Route$1({
-    			props: { path: "/", component: Login },
+    			props: { path: "/", component: Login_1 },
     			$$inline: true
     		});
 
@@ -7361,23 +9573,23 @@ var app = (function () {
     			t16 = space();
     			create_component(route10.$$.fragment);
     			attr_dev(div0, "class", "flex-1");
-    			add_location(div0, file, 24, 3, 865);
+    			add_location(div0, file, 23, 6, 950);
     			attr_dev(label0, "class", "lowercase");
-    			add_location(label0, file, 39, 6, 1548);
+    			add_location(label0, file, 50, 12, 1821);
     			attr_dev(label1, "tabindex", "0");
     			attr_dev(label1, "class", "btn btn-ghost");
-    			add_location(label1, file, 38, 5, 1498);
-    			add_location(li0, file, 42, 6, 1719);
-    			add_location(li1, file, 47, 6, 1872);
+    			add_location(label1, file, 49, 10, 1765);
+    			add_location(li0, file, 56, 12, 2046);
+    			add_location(li1, file, 65, 12, 2300);
     			attr_dev(ul, "tabindex", "0");
     			attr_dev(ul, "class", "mt-3 p-2 shadow menu menu-compact dropdown-content bg-base-100 rounded-box w-52");
-    			add_location(ul, file, 41, 5, 1606);
+    			add_location(ul, file, 52, 10, 1889);
     			attr_dev(div1, "class", "dropdown dropdown-end");
-    			add_location(div1, file, 36, 4, 1393);
+    			add_location(div1, file, 47, 8, 1650);
     			attr_dev(div2, "class", "flex-none gap-2");
-    			add_location(div2, file, 35, 3, 1358);
+    			add_location(div2, file, 46, 6, 1611);
     			attr_dev(div3, "class", "navbar bg-base-300 mb-4");
-    			add_location(div3, file, 23, 2, 823);
+    			add_location(div3, file, 22, 4, 905);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div3, anchor);
@@ -7426,35 +9638,35 @@ var app = (function () {
     		p: function update(ctx, dirty) {
     			const link0_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 2) {
     				link0_changes.$$scope = { dirty, ctx };
     			}
 
     			link0.$set(link0_changes);
     			const link1_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 2) {
     				link1_changes.$$scope = { dirty, ctx };
     			}
 
     			link1.$set(link1_changes);
     			const link2_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 2) {
     				link2_changes.$$scope = { dirty, ctx };
     			}
 
     			link2.$set(link2_changes);
     			const link3_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 2) {
     				link3_changes.$$scope = { dirty, ctx };
     			}
 
     			link3.$set(link3_changes);
     			const link4_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 2) {
     				link4_changes.$$scope = { dirty, ctx };
     			}
 
@@ -7535,7 +9747,7 @@ var app = (function () {
     		block,
     		id: create_default_slot.name,
     		type: "slot",
-    		source: "(23:1) <Router>",
+    		source: "(22:2) <Router>",
     		ctx
     	});
 
@@ -7560,7 +9772,7 @@ var app = (function () {
     			div = element("div");
     			create_component(router.$$.fragment);
     			attr_dev(div, "class", "App");
-    			add_location(div, file, 21, 0, 791);
+    			add_location(div, file, 20, 0, 870);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -7573,7 +9785,7 @@ var app = (function () {
     		p: function update(ctx, [dirty]) {
     			const router_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
+    			if (dirty & /*$$scope*/ 2) {
     				router_changes.$$scope = { dirty, ctx };
     			}
 
@@ -7608,6 +9820,7 @@ var app = (function () {
     function instance($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('App', slots, []);
+    	axios.defaults.baseURL = "http://localhost:5000";
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
@@ -7615,10 +9828,11 @@ var app = (function () {
     	});
 
     	$$self.$capture_state = () => ({
+    		Axios: axios,
     		Router: Router$1,
     		Route: Route$1,
     		Link: Link$1,
-    		Login,
+    		Login: Login_1,
     		Home,
     		Profile,
     		UpdatePassword,

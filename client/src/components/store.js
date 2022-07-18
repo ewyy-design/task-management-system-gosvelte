@@ -14,13 +14,13 @@ const cart = writable([
   },
 ]);
 
-export const userData = writable([]);
+export const userData = writable({});
 
 export const fetchData = async () => {
   const url = `http://localhost:5000/users`;
   const res = await fetch(url);
   const data = await res.json();
-  console.log("DATA: ", data);
+  //   console.log("DATA: ", data);
   const loadedData = data.map((data, index) => ({
     index: index,
     name: data.name,

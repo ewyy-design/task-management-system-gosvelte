@@ -1,18 +1,57 @@
 <script>
-  import { fetchData, userData } from "./store";
-  fetchData();
-  let username = [];
-  // console.log($userData);
-  userData.subscribe((item) => {
-    username = item[0];
-    console.log("username: ", username);
-  });
+  // import { fetchData, userData } from "./store";
+  // // fetchData();
+  // // let username = [];
+  // // // console.log($userData);
+  // // userData.subscribe((item) => {
+  // //   username = item[0];
+  // //   console.log("username: ", username);
+  // // });
+  import Axios from "axios";
+  import { navigate } from "svelte-navigator";
+  import { userData } from "./store";
+
+  let username = "";
+  let password = "";
+  let loginStatus = false;
+
+  // $: {
+  //   console.log(username);
+  //   console.log(password);
+  // }
+
+  async function Login() {
+    var loginResponse = await Axios.post("/login", {
+      name: username,
+      password: password,
+    });
+
+    var loginStatus = loginResponse.data.valid;
+    console.log("login status: ", loginStatus);
+
+    if (loginStatus) {
+      // store status of "loggedin"
+      //set localstorage *optional
+      //store username and role
+      var userResponse = await Axios.get(`/user/${username}`);
+
+      console.log("user res: ", userResponse);
+
+      userData.set({
+        name: userResponse.data.name,
+        usergroup: userResponse.data.usergroup,
+      });
+      // console.log("dataname: ", userResponse);
+      // console.log("datagroup: ", userResponse.data.usergroup);
+
+      console.log("userdata: ", $userData);
+
+      navigate("/home");
+    }
+  }
 </script>
 
 <main>
-  {#if username}
-    {username.name}
-  {/if}
   <div class="relative flex flex-col justify-center min-h-screen ">
     <div
       class="w-full p-6 m-auto bg-white rounded shadow-lg ring-2 lg:max-w-md"
@@ -34,6 +73,7 @@
             type="text"
             class="block w-full px-4 py-2 mt-2 bg-white border rounded-md focus:border-blue-400 focus:ring-blue-300 focus:outline-none focus:ring focus:ring-opacity-40"
             name="username"
+            bind:value={username}
           />
         </div>
         <div class="mt-4">
@@ -45,10 +85,12 @@
               type="password"
               class="block w-full px-4 py-2 mt-2 bg-white border rounded-md focus:border-blue-400 focus:ring-blue-300 focus:outline-none focus:ring focus:ring-opacity-40"
               name="password"
+              bind:value={password}
             />
           </div>
           <div class="mt-6">
             <button
+              on:click={Login}
               class="w-full px-4 py-2 tracking-wide text-white transition-colors duration-200 transform bg-primary rounded-md hover:bg-blue-600 focus:outline-none focus:primary-focus"
             >
               Login
