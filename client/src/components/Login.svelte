@@ -29,7 +29,7 @@
         <div class="mt-4">
           <div>
             <label for="password" class="block text-sm text-gray-800">
-              Passworddd
+              Passwordddasd
             </label>
             <input type="password" class="block w-full px-4 py-2 mt-2 bg-white border rounded-md focus:border-blue-400 focus:ring-blue-300 focus:outline-none focus:ring focus:ring-opacity-40" name="password"/>
           </div>
