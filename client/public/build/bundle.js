@@ -7265,23 +7265,23 @@ var app = (function () {
     			t16 = space();
     			create_component(route10.$$.fragment);
     			attr_dev(div0, "class", "flex-1");
-    			add_location(div0, file, 24, 3, 841);
+    			add_location(div0, file, 24, 3, 865);
     			attr_dev(label0, "class", "lowercase");
-    			add_location(label0, file, 39, 6, 1509);
+    			add_location(label0, file, 39, 6, 1548);
     			attr_dev(label1, "tabindex", "0");
     			attr_dev(label1, "class", "btn btn-ghost");
-    			add_location(label1, file, 38, 5, 1460);
-    			add_location(li0, file, 42, 6, 1677);
-    			add_location(li1, file, 47, 6, 1825);
+    			add_location(label1, file, 38, 5, 1498);
+    			add_location(li0, file, 42, 6, 1719);
+    			add_location(li1, file, 47, 6, 1872);
     			attr_dev(ul, "tabindex", "0");
     			attr_dev(ul, "class", "mt-3 p-2 shadow menu menu-compact dropdown-content bg-base-100 rounded-box w-52");
-    			add_location(ul, file, 41, 5, 1565);
+    			add_location(ul, file, 41, 5, 1606);
     			attr_dev(div1, "class", "dropdown dropdown-end");
-    			add_location(div1, file, 36, 4, 1357);
+    			add_location(div1, file, 36, 4, 1393);
     			attr_dev(div2, "class", "flex-none gap-2");
-    			add_location(div2, file, 35, 3, 1323);
+    			add_location(div2, file, 35, 3, 1358);
     			attr_dev(div3, "class", "navbar bg-base-300 mb-4");
-    			add_location(div3, file, 23, 2, 800);
+    			add_location(div3, file, 23, 2, 823);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div3, anchor);
@@ -7464,7 +7464,7 @@ var app = (function () {
     			div = element("div");
     			create_component(router.$$.fragment);
     			attr_dev(div, "class", "App");
-    			add_location(div, file, 21, 0, 770);
+    			add_location(div, file, 21, 0, 791);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
